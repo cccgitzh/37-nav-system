@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>37° Nav - 舰长控制台</title>
+    <title>37° Nav - 舰长控制台 2.0</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
             --bg-dark: #0f1115;
             --brand-cyan: #00f2fe;
-            --brand-purple: #b026ff;
+            --brand-red: #ff4757;
             --text-main: #f3f4f6;
             --glass-bg: rgba(255, 255, 255, 0.03);
             --glass-border: rgba(255, 255, 255, 0.08);
@@ -18,22 +18,29 @@
         body {
             background-color: var(--bg-dark);
             color: var(--text-main);
-            font-family: 'Courier New', Courier, monospace; /* 控制台专用字体 */
+            font-family: 'Courier New', Courier, monospace;
             display: flex;
             justify-content: center;
-            align-items: center;
-            min-height: 100vh;
+            padding: 40px 20px;
             margin: 0;
             background-image: radial-gradient(circle at 50% -20%, #1e293b 0%, transparent 50%);
+            min-height: 100vh;
+            box-sizing: border-box;
         }
 
-        .admin-panel {
-            background: var(--glass-bg);
-            border: 1px solid var(--brand-cyan); /* 霓虹青色边框 */
-            border-radius: 12px;
-            padding: 40px;
+        .admin-container {
             width: 100%;
-            max-width: 500px;
+            max-width: 800px;
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+        }
+
+        .panel {
+            background: var(--glass-bg);
+            border: 1px solid var(--brand-cyan);
+            border-radius: 12px;
+            padding: 30px;
             box-shadow: 0 0 20px rgba(0, 242, 254, 0.1);
         }
 
@@ -54,7 +61,7 @@
         }
         input:focus, select:focus { outline: none; border-color: var(--brand-cyan); }
 
-        button {
+        .btn-submit {
             width: 100%;
             padding: 15px;
             background: rgba(0, 242, 254, 0.1);
@@ -67,68 +74,156 @@
             transition: all 0.3s;
             font-family: 'Courier New', Courier, monospace;
         }
-        button:hover { background: var(--brand-cyan); color: var(--bg-dark); }
+        .btn-submit:hover { background: var(--brand-cyan); color: var(--bg-dark); }
 
         #status-msg { margin-top: 15px; font-size: 0.9rem; text-align: center; }
+
+        /* 列表样式 */
+        .node-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .node-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            background: rgba(0,0,0,0.3);
+            border: 1px solid var(--glass-border);
+            border-radius: 6px;
+        }
+        .node-info h4 { margin: 0 0 5px 0; color: var(--brand-cyan); }
+        .node-info p { margin: 0; font-size: 0.8rem; color: #888; }
+        
+        .btn-delete {
+            background: rgba(255, 71, 87, 0.1);
+            color: var(--brand-red);
+            border: 1px solid var(--brand-red);
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: 'Courier New', Courier, monospace;
+            transition: all 0.3s;
+        }
+        .btn-delete:hover { background: var(--brand-red); color: white; }
     </style>
 </head>
 <body>
 
-    <div class="admin-panel">
-        <h2><i class="fa-solid fa-terminal"></i> 新节点录入系统</h2>
-        
-        <form id="add-link-form">
-            <div class="form-group">
-                <label>> 网站名称 (Title):</label>
-                <input type="text" id="title" required placeholder="例如：DeepFlood">
-            </div>
-            
-            <div class="form-group">
-                <label>> 网址 (URL):</label>
-                <input type="url" id="url" required placeholder="例如：https://deepflood.com">
-            </div>
-            
-            <div class="form-group">
-                <label>> 描述 (Description):</label>
-                <input type="text" id="description" placeholder="一句话简介...">
-            </div>
+    <div class="admin-container">
+        <div class="panel">
+            <h2><i class="fa-solid fa-terminal"></i> 新节点录入系统</h2>
+            <form id="add-link-form">
+                <div class="form-group">
+                    <label>> 网站名称 (Title):</label>
+                    <input type="text" id="title" required placeholder="例如：DeepFlood">
+                </div>
+                <div class="form-group">
+                    <label>> 网址 (URL):</label>
+                    <input type="url" id="url" required placeholder="例如：https://deepflood.com">
+                </div>
+                <div class="form-group">
+                    <label>> 描述 (Description):</label>
+                    <input type="text" id="description" placeholder="一句话简介...">
+                </div>
+                <div class="form-group">
+                    <label>> 分类归属 (Category):</label>
+                    <select id="category">
+                        <option value="探索基地">探索基地</option>
+                        <option value="核心服务">核心服务</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>> FontAwesome 图标 (Icon):</label>
+                    <input type="text" id="icon" value="fa-solid fa-link" placeholder="fa-solid fa-link">
+                </div>
+                <div class="form-group">
+                    <label>> 卡片光环颜色 (Color Theme):</label>
+                    <select id="color_theme">
+                        <option value="cyan">赛博青 (Cyan)</option>
+                        <option value="purple">霓虹紫 (Purple)</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn-submit">[ 确认注入数据 ]</button>
+            </form>
+            <div id="status-msg"></div>
+        </div>
 
-            <div class="form-group">
-                <label>> 分类归属 (Category):</label>
-                <select id="category">
-                    <option value="探索基地">探索基地</option>
-                    <option value="核心服务">核心服务</option>
-                </select>
+        <div class="panel">
+            <h2><i class="fa-solid fa-server"></i> 节点阵列管理</h2>
+            <div class="node-list" id="node-list-container">
+                <p style="color: var(--brand-cyan);">> 正在检索节点数据...</p>
             </div>
-
-            <div class="form-group">
-                <label>> FontAwesome 图标代码 (Icon):</label>
-                <input type="text" id="icon" value="fa-solid fa-link" placeholder="fa-solid fa-link">
-            </div>
-
-            <div class="form-group">
-                <label>> 卡片光环颜色 (Color Theme):</label>
-                <select id="color_theme">
-                    <option value="cyan">赛博青 (Cyan)</option>
-                    <option value="purple">霓虹紫 (Purple)</option>
-                </select>
-            </div>
-
-            <button type="submit">[ 确认注入数据 ]</button>
-        </form>
-
-        <div id="status-msg"></div>
+        </div>
     </div>
 
     <script>
+        const statusMsg = document.getElementById('status-msg');
+        const nodeListContainer = document.getElementById('node-list-container');
+
+        // 1. 获取并渲染现有节点列表
+        async function fetchAndRenderNodes() {
+            try {
+                // 直接复用前台拿数据的接口，因为后台也需要看全部数据
+                const response = await fetch('/api/links'); 
+                const links = await response.json();
+                
+                nodeListContainer.innerHTML = ''; // 清空加载提示
+                
+                if (links.length === 0) {
+                    nodeListContainer.innerHTML = '<p style="color: #888;">> 暂无活跃节点。</p>';
+                    return;
+                }
+
+                links.forEach(link => {
+                    const nodeHtml = `
+                        <div class="node-item">
+                            <div class="node-info">
+                                <h4>${link.title}</h4>
+                                <p>${link.url}</p>
+                            </div>
+                            <button class="btn-delete" onclick="deleteNode(${link.id}, '${link.title}')">
+                                <i class="fa-solid fa-trash"></i> 销毁
+                            </button>
+                        </div>
+                    `;
+                    nodeListContainer.innerHTML += nodeHtml;
+                });
+            } catch (error) {
+                nodeListContainer.innerHTML = '<p style="color: var(--brand-red);">> 获取节点数据失败。</p>';
+            }
+        }
+
+        // 2. 销毁节点的指令函数
+        async function deleteNode(id, title) {
+            // 弹窗二次确认，防止手滑
+            if (!confirm(`警告：确定要永久销毁 [ ${title} ] 节点吗？此操作不可逆！`)) return;
+
+            try {
+                const response = await fetch('/api/delete', {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id: id })
+                });
+
+                if (response.ok) {
+                    alert(`> 节点 [ ${title} ] 已成功抹除。`);
+                    fetchAndRenderNodes(); // 删完后重新刷新列表
+                } else {
+                    alert('> 销毁指令执行失败。');
+                }
+            } catch (error) {
+                alert('> 连接错误，无法发送销毁指令。');
+            }
+        }
+
+        // 3. 提交新节点表单逻辑 (原有的逻辑)
         document.getElementById('add-link-form').addEventListener('submit', async (e) => {
-            e.preventDefault(); // 阻止表单默认的刷新页面的行为
-            
-            const statusMsg = document.getElementById('status-msg');
+            e.preventDefault();
             statusMsg.style.color = "var(--brand-cyan)";
             statusMsg.innerText = "> 正在连接 D1 核心，传输数据中...";
 
-            // 收集表单里的数据
             const payload = {
                 title: document.getElementById('title').value,
                 url: document.getElementById('url').value,
@@ -139,7 +234,6 @@
             };
 
             try {
-                // 将数据发送到我们刚才写的 add.js 接口
                 const response = await fetch('/api/add', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -147,11 +241,12 @@
                 });
 
                 if (response.ok) {
-                    statusMsg.style.color = "#39ff14"; // 成功变绿
+                    statusMsg.style.color = "#39ff14";
                     statusMsg.innerText = "> [成功] 数据已注入，前台系统已更新。";
-                    document.getElementById('add-link-form').reset(); // 清空表单
+                    document.getElementById('add-link-form').reset();
+                    fetchAndRenderNodes(); // 填完后立刻刷新下方的列表
                 } else {
-                    statusMsg.style.color = "#ff4757"; // 失败变红
+                    statusMsg.style.color = "#ff4757";
                     statusMsg.innerText = "> [失败] 数据被拒绝。";
                 }
             } catch (error) {
@@ -159,6 +254,9 @@
                 statusMsg.innerText = "> [错误] 服务器连接丢失。";
             }
         });
+
+        // 页面加载完成后立即拉取节点列表
+        window.onload = fetchAndRenderNodes;
     </script>
 </body>
 </html>
