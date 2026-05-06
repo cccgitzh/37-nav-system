@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>37° Nav - 舰长控制台</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg-dark: #0f1115;
+            --brand-cyan: #00f2fe;
+            --brand-purple: #b026ff;
+            --text-main: #f3f4f6;
+            --glass-bg: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.08);
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            font-family: 'Courier New', Courier, monospace; /* 控制台专用字体 */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background-image: radial-gradient(circle at 50% -20%, #1e293b 0%, transparent 50%);
+        }
+
+        .admin-panel {
+            background: var(--glass-bg);
+            border: 1px solid var(--brand-cyan); /* 霓虹青色边框 */
+            border-radius: 12px;
+            padding: 40px;
+            width: 100%;
+            max-width: 500px;
+            box-shadow: 0 0 20px rgba(0, 242, 254, 0.1);
+        }
+
+        h2 { margin-top: 0; color: var(--brand-cyan); border-bottom: 1px solid var(--glass-border); padding-bottom: 15px;}
+        
+        .form-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 8px; color: var(--text-main); font-size: 0.9rem;}
+        
+        input, select {
+            width: 100%;
+            padding: 12px;
+            background: rgba(0,0,0,0.3);
+            border: 1px solid var(--glass-border);
+            color: var(--brand-cyan);
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-family: 'Courier New', Courier, monospace;
+        }
+        input:focus, select:focus { outline: none; border-color: var(--brand-cyan); }
+
+        button {
+            width: 100%;
+            padding: 15px;
+            background: rgba(0, 242, 254, 0.1);
+            color: var(--brand-cyan);
+            border: 1px solid var(--brand-cyan);
+            border-radius: 6px;
+            font-weight: bold;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-family: 'Courier New', Courier, monospace;
+        }
+        button:hover { background: var(--brand-cyan); color: var(--bg-dark); }
+
+        #status-msg { margin-top: 15px; font-size: 0.9rem; text-align: center; }
+    </style>
+</head>
+<body>
+
+    <div class="admin-panel">
+        <h2><i class="fa-solid fa-terminal"></i> 新节点录入系统</h2>
+        
+        <form id="add-link-form">
+            <div class="form-group">
+                <label>> 网站名称 (Title):</label>
+                <input type="text" id="title" required placeholder="例如：DeepFlood">
+            </div>
+            
+            <div class="form-group">
+                <label>> 网址 (URL):</label>
+                <input type="url" id="url" required placeholder="例如：https://deepflood.com">
+            </div>
+            
+            <div class="form-group">
+                <label>> 描述 (Description):</label>
+                <input type="text" id="description" placeholder="一句话简介...">
+            </div>
+
+            <div class="form-group">
+                <label>> 分类归属 (Category):</label>
+                <select id="category">
+                    <option value="探索基地">探索基地</option>
+                    <option value="核心服务">核心服务</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>> FontAwesome 图标代码 (Icon):</label>
+                <input type="text" id="icon" value="fa-solid fa-link" placeholder="fa-solid fa-link">
+            </div>
+
+            <div class="form-group">
+                <label>> 卡片光环颜色 (Color Theme):</label>
+                <select id="color_theme">
+                    <option value="cyan">赛博青 (Cyan)</option>
+                    <option value="purple">霓虹紫 (Purple)</option>
+                </select>
+            </div>
+
+            <button type="submit">[ 确认注入数据 ]</button>
+        </form>
+
+        <div id="status-msg"></div>
+    </div>
+
+    <script>
+        document.getElementById('add-link-form').addEventListener('submit', async (e) => {
+            e.preventDefault(); // 阻止表单默认的刷新页面的行为
+            
+            const statusMsg = document.getElementById('status-msg');
+            statusMsg.style.color = "var(--brand-cyan)";
+            statusMsg.innerText = "> 正在连接 D1 核心，传输数据中...";
+
+            // 收集表单里的数据
+            const payload = {
+                title: document.getElementById('title').value,
+                url: document.getElementById('url').value,
+                description: document.getElementById('description').value,
+                category: document.getElementById('category').value,
+                icon: document.getElementById('icon').value,
+                color_theme: document.getElementById('color_theme').value
+            };
+
+            try {
+                // 将数据发送到我们刚才写的 add.js 接口
+                const response = await fetch('/api/add', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (response.ok) {
+                    statusMsg.style.color = "#39ff14"; // 成功变绿
+                    statusMsg.innerText = "> [成功] 数据已注入，前台系统已更新。";
+                    document.getElementById('add-link-form').reset(); // 清空表单
+                } else {
+                    statusMsg.style.color = "#ff4757"; // 失败变红
+                    statusMsg.innerText = "> [失败] 数据被拒绝。";
+                }
+            } catch (error) {
+                statusMsg.style.color = "#ff4757";
+                statusMsg.innerText = "> [错误] 服务器连接丢失。";
+            }
+        });
+    </script>
+</body>
+</html>
