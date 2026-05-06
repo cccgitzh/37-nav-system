@@ -27,6 +27,7 @@
             padding: 0;
             /* 顶部添加一点神秘的微光渐变 */
             background-image: radial-gradient(circle at 50% -20%, #1e293b 0%, transparent 50%);
+            min-height: 100vh;
         }
 
         .container {
@@ -105,9 +106,10 @@
             font-size: 1.5rem;
             background: rgba(0, 242, 254, 0.1);
             color: var(--brand-cyan);
+            flex-shrink: 0;
         }
         
-        /* 紫色系卡片 */
+        /* 紫色系卡片样式 */
         .glass-card.purple:hover { border-color: var(--brand-purple); box-shadow: 0 10px 20px rgba(176, 38, 255, 0.05); }
         .glass-card.purple .icon-box { background: rgba(176, 38, 255, 0.1); color: var(--brand-purple); }
 
@@ -128,6 +130,13 @@
         }
         .glass-card:hover .card-title { color: var(--brand-cyan); }
         .glass-card.purple:hover .card-title { color: var(--brand-purple); }
+
+        /* 加载状态文字 */
+        .loading-text {
+            color: var(--brand-cyan);
+            font-family: 'Courier New', Courier, monospace;
+            grid-column: 1 / -1;
+        }
     </style>
 </head>
 <body>
@@ -138,44 +147,63 @@
             <p>星际指挥中心已启动。汇聚全网优质资源，极速响应，零运维的 Serverless 导航中枢。</p>
         </div>
 
-        <h2 class="category-title"><i class="fa-solid fa-compass"></i> 探索基地</h2>
-        <div class="grid">
-            <a href="https://github.com" target="_blank" class="glass-card">
-                <div class="icon-box"><i class="fa-brands fa-github"></i></div>
-                <div class="card-content">
-                    <h3 class="card-title">GitHub 代码库</h3>
-                    <p class="card-desc">全球最大的开源代码托管平台，你的代码大本营。</p>
-                </div>
-            </a>
-            
-            <a href="https://dash.cloudflare.com" target="_blank" class="glass-card">
-                <div class="icon-box"><i class="fa-solid fa-cloud"></i></div>
-                <div class="card-content">
-                    <h3 class="card-title">Cloudflare 控制台</h3>
-                    <p class="card-desc">强大的边缘计算网络，管理 Pages、Workers 和 D1 数据库。</p>
-                </div>
-            </a>
-        </div>
-
-        <h2 class="category-title" style="color: var(--brand-purple);"><i class="fa-solid fa-server"></i> 核心服务</h2>
-        <div class="grid">
-            <a href="#" class="glass-card purple">
-                <div class="icon-box"><i class="fa-solid fa-database"></i></div>
-                <div class="card-content">
-                    <h3 class="card-title">D1 数据总线</h3>
-                    <p class="card-desc">建立在边缘网络上的 SQLite 数据库，毫秒级读取。</p>
-                </div>
-            </a>
-
-            <a href="#" class="glass-card purple">
-                <div class="icon-box"><i class="fa-solid fa-bolt"></i></div>
-                <div class="card-content">
-                    <h3 class="card-title">KV 极速缓存</h3>
-                    <p class="card-desc">键值对存储系统，让网站加载速度快如闪电。</p>
-                </div>
-            </a>
+        <h2 class="category-title"><i class="fa-solid fa-satellite-dish"></i> 信号接收中...</h2>
+        
+        <div class="grid" id="nav-grid">
+            <p class="loading-text">> 正在从 D1 数据库同步节点信息，请稍候...</p>
         </div>
     </div>
 
+    <script>
+        async function loadLinks() {
+            const grid = document.getElementById('nav-grid');
+            const titleIcon = document.querySelector('.category-title');
+            
+            try {
+                // 向我们的后端 API 请求数据
+                const response = await fetch('/api/links');
+                
+                if (!response.ok) {
+                    throw new Error('网络响应异常');
+                }
+                
+                const links = await response.json();
+                
+                // 清空“加载中”的提示
+                grid.innerHTML = ''; 
+                // 修改标题
+                titleIcon.innerHTML = '<i class="fa-solid fa-radar"></i> 已连接节点';
+
+                // 遍历数据库里的数据，生成卡片
+                links.forEach(link => {
+                    // 判断数据库里存的颜色主题是不是 purple
+                    const isPurple = link.color_theme === 'purple' ? 'purple' : '';
+                    
+                    const cardHtml = `
+                        <a href="${link.url}" target="_blank" class="glass-card ${isPurple}">
+                            <div class="icon-box"><i class="${link.icon}"></i></div>
+                            <div class="card-content">
+                                <h3 class="card-title">${link.title}</h3>
+                                <p class="card-desc">${link.description}</p>
+                            </div>
+                        </a>
+                    `;
+                    grid.innerHTML += cardHtml;
+                });
+
+                // 如果数据库里一条数据都没有
+                if (links.length === 0) {
+                    grid.innerHTML = '<p class="loading-text" style="color: var(--text-muted);">> 数据库中暂无数据记录。</p>';
+                }
+
+            } catch (error) {
+                console.error("数据加载失败:", error);
+                grid.innerHTML = '<p class="loading-text" style="color: #ff4757;">> [错误] 无法连接到 D1 数据库。请检查 API 配置。</p>';
+            }
+        }
+
+        // 页面加载完毕后立即执行
+        window.onload = loadLinks;
+    </script>
 </body>
 </html>
