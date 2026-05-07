@@ -3,12 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>37° Nav - 舰长控制台 2.0</title>
+    <title>37° Nav - 舰长控制台 3.0</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
             --bg-dark: #0f1115;
             --brand-cyan: #00f2fe;
+            --brand-purple: #b026ff;
             --brand-red: #ff4757;
             --text-main: #f3f4f6;
             --glass-bg: rgba(255, 255, 255, 0.03);
@@ -61,6 +62,25 @@
         }
         input:focus, select:focus { outline: none; border-color: var(--brand-cyan); }
 
+        /* 智能解析按钮组专属样式 */
+        .url-group {
+            display: flex;
+            gap: 10px;
+        }
+        .btn-parse {
+            background: rgba(176, 38, 255, 0.1);
+            color: var(--brand-purple);
+            border: 1px solid var(--brand-purple);
+            border-radius: 6px;
+            padding: 0 20px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-family: 'Courier New', Courier, monospace;
+            white-space: nowrap; /* 保证文字不换行 */
+        }
+        .btn-parse:hover { background: var(--brand-purple); color: #fff; box-shadow: 0 0 15px rgba(176, 38, 255, 0.4); }
+
         .btn-submit {
             width: 100%;
             padding: 15px;
@@ -79,33 +99,12 @@
         #status-msg { margin-top: 15px; font-size: 0.9rem; text-align: center; }
 
         /* 列表样式 */
-        .node-list {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-        .node-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 15px;
-            background: rgba(0,0,0,0.3);
-            border: 1px solid var(--glass-border);
-            border-radius: 6px;
-        }
+        .node-list { display: flex; flex-direction: column; gap: 15px; }
+        .node-item { display: flex; justify-content: space-between; align-items: center; padding: 15px; background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border); border-radius: 6px; }
         .node-info h4 { margin: 0 0 5px 0; color: var(--brand-cyan); }
         .node-info p { margin: 0; font-size: 0.8rem; color: #888; }
         
-        .btn-delete {
-            background: rgba(255, 71, 87, 0.1);
-            color: var(--brand-red);
-            border: 1px solid var(--brand-red);
-            padding: 8px 15px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-family: 'Courier New', Courier, monospace;
-            transition: all 0.3s;
-        }
+        .btn-delete { background: rgba(255, 71, 87, 0.1); color: var(--brand-red); border: 1px solid var(--brand-red); padding: 8px 15px; border-radius: 4px; cursor: pointer; font-family: 'Courier New', Courier, monospace; transition: all 0.3s; }
         .btn-delete:hover { background: var(--brand-red); color: white; }
     </style>
 </head>
@@ -113,31 +112,41 @@
 
     <div class="admin-container">
         <div class="panel">
-            <h2><i class="fa-solid fa-terminal"></i> 新节点录入系统</h2>
+            <h2><i class="fa-solid fa-terminal"></i> 智能节点录入系统</h2>
             <form id="add-link-form">
+                
+                <div class="form-group">
+                    <label>> 目标网址 (URL) [先填这个，然后点击右侧解析]:</label>
+                    <div class="url-group">
+                        <input type="url" id="url" required placeholder="例如：https://github.com">
+                        <button type="button" id="btn-parse" class="btn-parse"><i class="fa-solid fa-wand-magic-sparkles"></i> AI 解析</button>
+                    </div>
+                </div>
+
                 <div class="form-group">
                     <label>> 网站名称 (Title):</label>
-                    <input type="text" id="title" required placeholder="例如：DeepFlood">
+                    <input type="text" id="title" required placeholder="点击解析后自动填充...">
                 </div>
-                <div class="form-group">
-                    <label>> 网址 (URL):</label>
-                    <input type="url" id="url" required placeholder="例如：https://deepflood.com">
-                </div>
+                
                 <div class="form-group">
                     <label>> 描述 (Description):</label>
-                    <input type="text" id="description" placeholder="一句话简介...">
+                    <input type="text" id="description" placeholder="点击解析后自动填充...">
                 </div>
+
                 <div class="form-group">
                     <label>> 分类归属 (Category):</label>
                     <select id="category">
                         <option value="探索基地">探索基地</option>
                         <option value="核心服务">核心服务</option>
+                        <option value="独立项目">独立项目</option>
                     </select>
                 </div>
+
                 <div class="form-group">
                     <label>> FontAwesome 图标 (Icon):</label>
-                    <input type="text" id="icon" value="fa-solid fa-link" placeholder="fa-solid fa-link">
+                    <input type="text" id="icon" value="fa-solid fa-link" placeholder="点击解析后自动填充...">
                 </div>
+
                 <div class="form-group">
                     <label>> 卡片光环颜色 (Color Theme):</label>
                     <select id="color_theme">
@@ -145,6 +154,7 @@
                         <option value="purple">霓虹紫 (Purple)</option>
                     </select>
                 </div>
+
                 <button type="submit" class="btn-submit">[ 确认注入数据 ]</button>
             </form>
             <div id="status-msg"></div>
@@ -162,20 +172,71 @@
         const statusMsg = document.getElementById('status-msg');
         const nodeListContainer = document.getElementById('node-list-container');
 
-        // 1. 获取并渲染现有节点列表
+        // ==========================================
+        // 【新增】智能解析靶向雷达逻辑
+        // ==========================================
+        document.getElementById('btn-parse').addEventListener('click', async () => {
+            const urlInput = document.getElementById('url').value;
+            
+            if (!urlInput) {
+                statusMsg.style.color = "#ff4757";
+                statusMsg.innerText = "> [警告] 请先输入目标网址！";
+                return;
+            }
+
+            // 按钮状态变更为解析中
+            const parseBtn = document.getElementById('btn-parse');
+            const originalBtnText = parseBtn.innerHTML;
+            parseBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 解析中...';
+            parseBtn.disabled = true;
+
+            statusMsg.style.color = "var(--brand-purple)";
+            statusMsg.innerText = "> 正在召唤边缘节点与 AI，执行深度渗透解析...";
+
+            try {
+                // 调用我们刚刚写好的 API
+                const response = await fetch('/api/parse', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url: urlInput })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    // 核心动作：将 AI 爬取回来的数据，自动填入输入框
+                    if (data.title) document.getElementById('title').value = data.title;
+                    if (data.description) document.getElementById('description').value = data.description;
+                    if (data.icon) document.getElementById('icon').value = data.icon;
+                    
+                    statusMsg.style.color = "#39ff14";
+                    statusMsg.innerText = "> [渗透成功] 目标特征已解析并自动填充！你可以微调后点击注入。";
+                } else {
+                    statusMsg.style.color = "#ff4757";
+                    statusMsg.innerText = "> [渗透失败] 目标星体拒绝访问或超时。";
+                }
+            } catch (error) {
+                statusMsg.style.color = "#ff4757";
+                statusMsg.innerText = "> [系统异常] 边缘解析链路中断。";
+            } finally {
+                // 恢复按钮状态
+                parseBtn.innerHTML = originalBtnText;
+                parseBtn.disabled = false;
+            }
+        });
+
+        // ==========================================
+        // 原有逻辑：拉取列表、删除、提交新增
+        // ==========================================
         async function fetchAndRenderNodes() {
             try {
-                // 直接复用前台拿数据的接口，因为后台也需要看全部数据
                 const response = await fetch('/api/links'); 
                 const links = await response.json();
-                
-                nodeListContainer.innerHTML = ''; // 清空加载提示
-                
+                nodeListContainer.innerHTML = ''; 
                 if (links.length === 0) {
                     nodeListContainer.innerHTML = '<p style="color: #888;">> 暂无活跃节点。</p>';
                     return;
                 }
-
                 links.forEach(link => {
                     const nodeHtml = `
                         <div class="node-item">
@@ -195,35 +256,27 @@
             }
         }
 
-        // 2. 销毁节点的指令函数
         async function deleteNode(id, title) {
-            // 弹窗二次确认，防止手滑
-            if (!confirm(`警告：确定要永久销毁 [ ${title} ] 节点吗？此操作不可逆！`)) return;
-
+            if (!confirm(`警告：确定要永久销毁 [ ${title} ] 节点吗？`)) return;
             try {
                 const response = await fetch('/api/delete', {
                     method: 'DELETE',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ id: id })
                 });
-
                 if (response.ok) {
-                    alert(`> 节点 [ ${title} ] 已成功抹除。`);
-                    fetchAndRenderNodes(); // 删完后重新刷新列表
-                } else {
-                    alert('> 销毁指令执行失败。');
+                    fetchAndRenderNodes(); 
+                    alert(`> 节点 [ ${title} ] 已抹除。`);
                 }
             } catch (error) {
-                alert('> 连接错误，无法发送销毁指令。');
+                alert('> 连接错误。');
             }
         }
 
-        // 3. 提交新节点表单逻辑 (原有的逻辑)
         document.getElementById('add-link-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             statusMsg.style.color = "var(--brand-cyan)";
             statusMsg.innerText = "> 正在连接 D1 核心，传输数据中...";
-
             const payload = {
                 title: document.getElementById('title').value,
                 url: document.getElementById('url').value,
@@ -232,19 +285,17 @@
                 icon: document.getElementById('icon').value,
                 color_theme: document.getElementById('color_theme').value
             };
-
             try {
                 const response = await fetch('/api/add', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
-
                 if (response.ok) {
                     statusMsg.style.color = "#39ff14";
-                    statusMsg.innerText = "> [成功] 数据已注入，前台系统已更新。";
+                    statusMsg.innerText = "> [成功] 数据已注入。";
                     document.getElementById('add-link-form').reset();
-                    fetchAndRenderNodes(); // 填完后立刻刷新下方的列表
+                    fetchAndRenderNodes(); 
                 } else {
                     statusMsg.style.color = "#ff4757";
                     statusMsg.innerText = "> [失败] 数据被拒绝。";
@@ -255,7 +306,6 @@
             }
         });
 
-        // 页面加载完成后立即拉取节点列表
         window.onload = fetchAndRenderNodes;
     </script>
 </body>
