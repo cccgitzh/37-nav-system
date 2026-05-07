@@ -16,11 +16,21 @@
             theme: {
                 extend: {
                     colors: {
-                        obsidian: '#030712',
-                        cyan: { 400: '#22d3ee' },
-                        emerald: { 500: '#10b981' },
-                        crimson: { 500: '#ef4444' },
-                        purple: { 500: '#b026ff' }
+                        /* 注入正统 Dracula 官方色卡 */
+                        dracula: {
+                            dark: '#0E0D11',    // 极深背景
+                            bg: '#282a36',      // 控件背景
+                            current: '#44475a', // 边框与高亮
+                            fg: '#f8f8f2',      // 前景文字
+                            comment: '#6272a4', // 注释/失焦文字
+                            cyan: '#8be9fd',
+                            green: '#50fa7b',
+                            orange: '#ffb86c',
+                            pink: '#ff79c6',
+                            purple: '#bd93f9',
+                            red: '#ff5555',
+                            yellow: '#f1fa8c'
+                        }
                     },
                     fontFamily: { mono: ['"JetBrains Mono"', 'monospace'] }
                 }
@@ -29,131 +39,125 @@
     </script>
 
     <style>
-        /* 丝滑滚动特效 */
         html { scroll-behavior: smooth; }
 
         body {
-            background-color: #030712;
+            background-color: #0E0D11;
             background-image: 
-                linear-gradient(rgba(34, 211, 238, 0.03) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(34, 211, 238, 0.03) 1px, transparent 1px);
+                linear-gradient(rgba(139, 233, 253, 0.02) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(139, 233, 253, 0.02) 1px, transparent 1px);
             background-size: 30px 30px;
             background-attachment: fixed;
             font-family: 'JetBrains Mono', monospace;
             -webkit-font-smoothing: antialiased;
-            color: #ffffff;
+            color: #f8f8f2;
             margin-bottom: 50px;
         }
 
         .glass-panel {
-            background: rgba(255, 255, 255, 0.03);
+            background: rgba(40, 42, 54, 0.6);
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.05);
+            border: 1px solid #44475a;
         }
 
-        .solid-text-white { color: #ffffff !important; }
-        .solid-text-cyan { color: #22d3ee !important; }
-        .solid-text-emerald { color: #10b981 !important; }
-        .solid-text-crimson { color: #ef4444 !important; }
-        .solid-text-gray { color: #9ca3af !important; }
-        
         ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: #030712; }
-        ::-webkit-scrollbar-thumb { background: #22d3ee; border-radius: 3px; }
+        ::-webkit-scrollbar-track { background: #0E0D11; }
+        ::-webkit-scrollbar-thumb { background: #bd93f9; border-radius: 3px; }
         
-        /* 隐藏分类导航的横向滚动条 */
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-        /* 模态框系统 */
+        /* 赛博模态框系统 (适配 Dracula 配色) */
         .cyber-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; z-index: 9999; opacity: 0; pointer-events: none; transition: opacity 0.2s ease; }
         .cyber-overlay.active { opacity: 1; pointer-events: all; }
-        .cyber-modal { background: #030712; border: 1px solid #22d3ee; box-shadow: 0 0 40px rgba(34, 211, 238, 0.15); border-radius: 12px; padding: 25px; width: 90%; max-width: 400px; transform: scale(0.95) translateY(10px); transition: transform 0.2s ease; }
+        .cyber-modal { background: #282a36; border: 1px solid #bd93f9; box-shadow: 0 0 40px rgba(189, 147, 249, 0.15); border-radius: 12px; padding: 25px; width: 90%; max-width: 400px; transform: scale(0.95) translateY(10px); transition: transform 0.2s ease; }
         .cyber-overlay.active .cyber-modal { transform: scale(1) translateY(0); }
-        .cyber-modal-title { font-weight: bold; font-size: 1.1rem; margin-bottom: 10px; display: flex; align-items: center; gap: 8px;}
-        .cyber-modal-msg { color: #aaa; font-size: 0.9rem; line-height: 1.5; margin-bottom: 20px;}
+        .cyber-modal-title { font-weight: bold; font-size: 1.1rem; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; color: #8be9fd; }
+        .cyber-modal-msg { color: #f8f8f2; font-size: 0.9rem; line-height: 1.5; margin-bottom: 20px;}
         .cyber-modal-actions { display: flex; justify-content: flex-end; gap: 12px; }
-        .btn-modal { padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: bold; border: 1px solid; transition: all 0.2s; background: transparent; font-family: inherit;}
-        .btn-modal.cancel { border-color: #666; color: #888; }
-        .btn-modal.cancel:hover { background: #444; color: #fff; }
-        .btn-modal.confirm { border-color: #22d3ee; color: #22d3ee; background: rgba(34,211,238,0.1); }
-        .btn-modal.confirm:hover { background: #22d3ee; color: #030712; }
-        .cyber-input { width: 100%; padding: 12px; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.2); color: #22d3ee; border-radius: 6px; box-sizing: border-box; font-family: inherit; margin-bottom: 20px; outline: none; transition: border-color 0.2s;}
-        .cyber-input:focus { border-color: #22d3ee; box-shadow: 0 0 10px rgba(34,211,238,0.1); }
-        
-        /* 导航栏呼吸特效 */
-        .nav-link-active { color: #22d3ee; border-bottom: 2px solid #22d3ee; }
+        .btn-modal { padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: bold; border: 1px solid; transition: all 0.2s; background: transparent; font-family: inherit;}
+        .btn-modal.cancel { border-color: #6272a4; color: #6272a4; }
+        .btn-modal.cancel:hover { background: #44475a; color: #f8f8f2; }
+        .btn-modal.confirm { border-color: #bd93f9; color: #bd93f9; background: rgba(189, 147, 249, 0.1); }
+        .btn-modal.confirm:hover { background: #bd93f9; color: #282a36; }
+        .cyber-input { width: 100%; padding: 12px; background: #0E0D11; border: 1px solid #44475a; color: #f8f8f2; border-radius: 8px; box-sizing: border-box; font-family: inherit; margin-bottom: 20px; outline: none; transition: border-color 0.2s;}
+        .cyber-input:focus { border-color: #bd93f9; box-shadow: 0 0 10px rgba(189, 147, 249, 0.2); }
     </style>
 </head>
 <body class="min-h-screen flex flex-col items-center pb-16 relative">
 
-    <nav class="fixed top-0 w-full z-50 border-b border-[#22d3ee]/20 bg-[#030712]/90 backdrop-blur-md shadow-lg shadow-cyan-900/10 flex flex-col">
+    <header class="fixed top-0 w-full z-50 bg-dracula-dark border-b border-[#ffffff1a] shadow-lg flex flex-col">
         
-        <div class="max-w-7xl w-full mx-auto px-6 py-3 flex flex-col xl:flex-row items-center justify-between gap-4">
+        <div class="max-w-7xl w-full mx-auto px-4 md:px-6 py-3 flex flex-wrap items-center justify-between gap-4">
             
-            <div class="flex items-center justify-between w-full xl:w-auto">
-                <span class="font-extrabold text-2xl tracking-tighter solid-text-white cursor-pointer" onclick="window.scrollTo(0,0)">37°<span class="solid-text-cyan">NAV_</span></span>
-                <div class="xl:hidden flex items-center gap-3">
-                    <button id="auth-btn-mobile" class="text-xs solid-text-gray hover:solid-text-cyan transition-colors font-bold"><i class="fa-solid fa-lock"></i></button>
-                </div>
+            <div class="flex items-center justify-between w-full md:w-auto">
+                <a href="#" onclick="window.scrollTo(0,0)" class="flex items-center gap-2 group flex-shrink-0">
+                    <img src="./logo.png" alt="Logo" class="w-8 h-8 rounded border border-dracula-purple/50 object-cover shadow-[0_0_10px_rgba(189,147,249,0.2)]" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                    <i class="fa-solid fa-cube text-dracula-purple text-2xl hidden"></i>
+                    <span class="text-xl font-bold text-dracula-fg tracking-tight group-hover:text-dracula-pink transition-colors">
+                        37°<span class="text-dracula-purple ml-1">NAV</span>
+                    </span>
+                </a>
+                <button id="auth-btn-mobile" class="md:hidden text-sm bg-dracula-purple hover:bg-dracula-pink text-dracula-dark font-bold px-3 py-1.5 rounded-lg transition-colors shadow-lg">
+                    <i class="fa-solid fa-lock"></i>
+                </button>
             </div>
             
-            <div class="flex-1 w-full flex flex-col md:flex-row items-center justify-center gap-3">
-                <form id="web-search-form" class="flex w-full md:w-auto h-9 rounded bg-black/60 border border-[#22d3ee]/30 overflow-hidden focus-within:border-[#22d3ee] transition-colors shadow-inner">
-                    <select id="engine-select" class="bg-transparent solid-text-cyan px-2 text-xs md:text-sm outline-none border-r border-[#22d3ee]/30 cursor-pointer">
+            <div class="flex-1 w-full md:w-auto flex flex-col md:flex-row items-center gap-3 order-3 md:order-2">
+                <form id="web-search-form" class="flex-1 w-full flex items-center bg-dracula-bg hover:bg-[#343746] border border-dracula-current rounded-lg px-3 py-2 md:py-1.5 transition-colors focus-within:border-dracula-purple focus-within:bg-dracula-bg shadow-inner">
+                    <select id="engine-select" class="bg-transparent text-dracula-fg text-sm outline-none cursor-pointer pr-2 border-r border-dracula-current">
                         <option value="https://www.google.com/search?q=">Google</option>
                         <option value="https://www.bing.com/search?q=">Bing</option>
                         <option value="https://github.com/search?q=">GitHub</option>
                     </select>
-                    <input type="text" id="web-search-input" placeholder="跃迁至外网..." required class="flex-1 bg-transparent solid-text-white px-3 text-xs md:text-sm outline-none md:w-56 placeholder-gray-600">
-                    <button type="submit" class="px-3 text-[#22d3ee] hover:bg-[#22d3ee]/20 transition-colors"><i class="fa-solid fa-rocket"></i></button>
+                    <input type="text" id="web-search-input" placeholder="Search the web..." required class="flex-1 bg-transparent text-dracula-fg text-sm outline-none px-3 placeholder-dracula-comment w-full">
+                    <button type="submit" class="text-dracula-comment hover:text-dracula-fg transition-colors"><i class="fa-solid fa-arrow-right-to-bracket"></i></button>
                 </form>
                 
-                <div class="relative w-full md:w-64 h-9">
-                    <i class="fa-solid fa-robot absolute left-3 top-2.5 solid-text-cyan text-sm"></i>
-                    <input type="text" id="ai-filter-input" placeholder="唤醒 AI 语义检索 / 即时过滤..." class="w-full h-full bg-black/60 border border-[#22d3ee]/30 solid-text-white pl-8 pr-3 text-xs md:text-sm rounded outline-none focus:border-[#22d3ee] transition-colors placeholder-gray-600 shadow-inner">
+                <div class="flex-1 w-full flex items-center bg-dracula-bg hover:bg-[#343746] border border-dracula-current rounded-lg px-3 py-2 md:py-1.5 transition-colors focus-within:border-dracula-pink focus-within:bg-dracula-bg relative shadow-inner">
+                    <i class="fa-solid fa-robot text-dracula-comment text-sm"></i>
+                    <input type="text" id="ai-filter-input" placeholder="AI Filter & Search..." class="flex-1 bg-transparent text-dracula-fg text-sm outline-none px-3 placeholder-dracula-comment w-full">
+                    <kbd class="hidden xl:inline-block bg-dracula-current text-dracula-fg text-[10px] px-1.5 py-0.5 rounded ml-2 font-mono border border-[#55586b] shadow-sm">⌘K</kbd>
                 </div>
             </div>
 
-            <div class="hidden xl:flex items-center gap-4">
-                <a href="/admin.html" id="admin-link" target="_blank" class="hidden text-xs solid-text-purple hover:text-white font-bold tracking-wider border border-[#b026ff]/30 hover:bg-[#b026ff]/10 px-3 py-1.5 rounded transition-all">
-                    <i class="fa-solid fa-server mr-1"></i>CONSOLE
+            <div class="hidden md:flex items-center gap-4 flex-shrink-0 order-2 md:order-3">
+                <a href="/admin.html" id="admin-link" target="_blank" class="hidden text-sm text-dracula-comment hover:text-dracula-fg font-semibold transition-colors">
+                    <i class="fa-solid fa-server mr-1"></i>Console
                 </a>
-                <button id="auth-btn-pc" class="text-xs solid-text-gray hover:solid-text-cyan transition-colors font-bold px-3 py-1.5 border border-transparent">
-                    <i class="fa-solid fa-lock mr-1"></i>SYS_OP
+                <button id="auth-btn-pc" class="text-sm bg-dracula-purple hover:bg-dracula-pink text-dracula-dark font-bold px-4 py-1.5 rounded-lg transition-colors flex items-center gap-2 shadow-lg shadow-dracula-purple/20">
+                    <i class="fa-solid fa-lock"></i><span>SYS_OP</span>
                 </button>
             </div>
         </div>
 
-        <div class="w-full border-t border-white/5 bg-[#030712]/50">
-            <div class="max-w-7xl mx-auto px-6">
-                <div id="nav-categories" class="flex items-center gap-8 overflow-x-auto py-2.5 no-scrollbar text-sm font-bold">
-                    <p class="text-xs text-gray-600">Syncing telemetry data...</p>
+        <div class="w-full border-t border-dracula-current/50 bg-dracula-dark/95">
+            <div class="max-w-7xl mx-auto px-4 md:px-6">
+                <div id="nav-categories" class="flex items-center gap-2 overflow-x-auto py-2.5 no-scrollbar text-sm font-medium text-dracula-comment">
+                    <span class="text-xs">Syncing telemetry data...</span>
                 </div>
             </div>
         </div>
-    </nav>
+    </header>
 
-    <main class="w-full max-w-7xl flex flex-col gap-10 pt-44 md:pt-36 px-6">
-        
+    <main class="w-full max-w-7xl flex flex-col gap-10 pt-48 md:pt-36 px-6">
         <div id="dynamic-zones" class="flex flex-col gap-12"></div>
-
     </main>
 
-    <footer class="fixed bottom-0 left-0 w-full h-10 bg-[#030712] border-t border-[#10b981]/30 flex items-center justify-between px-6 z-40 shadow-[0_-5px_20px_rgba(0,0,0,0.8)]">
+    <footer class="fixed bottom-0 left-0 w-full h-10 bg-dracula-dark border-t border-dracula-current flex items-center justify-between px-6 z-40">
         <div class="flex items-center gap-3">
-            <i class="fa-solid fa-heart-pulse solid-text-emerald animate-pulse text-base"></i>
-            <span class="text-xs font-bold solid-text-emerald tracking-wider hidden sm:inline">TELEMETRY_LINK_ACTIVE</span>
+            <i class="fa-solid fa-heart-pulse text-dracula-green animate-pulse text-base"></i>
+            <span class="text-xs font-bold text-dracula-green tracking-wider hidden sm:inline">TELEMETRY_LINK_ACTIVE</span>
         </div>
-        <div id="hud-uptime" class="text-xs font-bold solid-text-cyan tracking-wider"></div>
+        <div id="hud-uptime" class="text-xs font-bold text-dracula-purple tracking-wider"></div>
     </footer>
 
     <div id="sys-modal-root"></div>
 
     <script>
         /* =========================================================
-           赛博模态框 UI 引擎
+           UI 引擎与数据逻辑 (完美适配)
            ========================================================= */
         const SysUI = {
             createContainer(id) {
@@ -173,19 +177,18 @@
                     const overlay = this.createContainer('cyber-prompt');
                     overlay.innerHTML = `
                         <div class="cyber-modal">
-                            <div class="cyber-modal-title" style="color:#22d3ee;"><i class="fa-solid fa-terminal"></i> ${title}</div>
+                            <div class="cyber-modal-title"><i class="fa-solid fa-terminal"></i> ${title}</div>
                             <div class="cyber-modal-msg">${msg}</div>
                             <input type="${type}" id="prompt-input" class="cyber-input" autocomplete="off">
                             <div class="cyber-modal-actions">
-                                <button class="btn-modal cancel" id="p-cancel">CANCEL</button>
-                                <button class="btn-modal confirm" id="p-ok">OVERRIDE</button>
+                                <button class="btn-modal cancel" id="p-cancel">Cancel</button>
+                                <button class="btn-modal confirm" id="p-ok">Authorize</button>
                             </div>
                         </div>
                     `;
                     requestAnimationFrame(() => overlay.classList.add('active'));
                     const input = overlay.querySelector('#prompt-input');
                     input.focus();
-                    
                     overlay.querySelector('#p-cancel').onclick = () => { this.close(overlay); resolve(null); };
                     overlay.querySelector('#p-ok').onclick = () => { this.close(overlay); resolve(input.value); };
                     input.addEventListener('keypress', (e) => { if(e.key === 'Enter') overlay.querySelector('#p-ok').click(); });
@@ -194,31 +197,26 @@
             showConfirm(title, msg, isDanger = false) {
                 return new Promise(resolve => {
                     const overlay = this.createContainer('cyber-confirm');
-                    const themeColor = isDanger ? '#ef4444' : '#10b981';
+                    const themeColor = isDanger ? '#ff5555' : '#50fa7b';
                     const btnClass = isDanger ? 'danger' : 'confirm';
                     const icon = isDanger ? 'fa-triangle-exclamation' : 'fa-circle-check';
-                    
                     overlay.innerHTML = `
                         <div class="cyber-modal" style="border-color:${themeColor}">
                             <div class="cyber-modal-title" style="color:${themeColor};"><i class="fa-solid ${icon}"></i> ${title}</div>
                             <div class="cyber-modal-msg">${msg}</div>
                             <div class="cyber-modal-actions">
-                                <button class="btn-modal cancel" id="c-cancel">CANCEL</button>
-                                <button class="btn-modal ${btnClass}" id="c-ok">CONFIRM</button>
+                                <button class="btn-modal cancel" id="c-cancel">Cancel</button>
+                                <button class="btn-modal ${btnClass}" id="c-ok">Confirm</button>
                             </div>
                         </div>
                     `;
                     requestAnimationFrame(() => overlay.classList.add('active'));
-                    
                     overlay.querySelector('#c-cancel').onclick = () => { this.close(overlay); resolve(false); };
                     overlay.querySelector('#c-ok').onclick = () => { this.close(overlay); resolve(true); };
                 });
             }
         };
 
-        /* =========================================================
-           系统核心逻辑
-           ========================================================= */
         let globalCategories = [];
         let globalNodes = [];
         let isAdmin = sessionStorage.getItem('sys_op_token') === 'AUTHORIZED';
@@ -230,24 +228,21 @@
                 const [catRes, nodeRes] = await Promise.all([ fetch('/api/categories'), fetch('/api/nodes') ]);
                 globalCategories = await catRes.json();
                 globalNodes = await nodeRes.json();
-                
-                // 1. 渲染顶部锚点导航
                 renderNavbarCategories();
-                // 2. 渲染下方数据区块
                 renderCategorizedNodes(globalNodes);
             } catch (e) {
-                dynamicZones.innerHTML = '<p class="solid-text-crimson">> [FATAL] 数据库核心链路断开。</p>';
+                dynamicZones.innerHTML = '<p class="text-dracula-red">> [FATAL] 数据库核心链路断开。</p>';
             }
         }
 
-        // 渲染顶部镶嵌的分类导航条
+        // 渲染顶部镶嵌的分类导航条 (Dracula 链接样式)
         function renderNavbarCategories() {
             if(globalCategories.length === 0) {
-                navCatContainer.innerHTML = '<span class="text-gray-600">No categories found.</span>';
+                navCatContainer.innerHTML = '<span>No categories found.</span>';
                 return;
             }
             navCatContainer.innerHTML = globalCategories.map(c => `
-                <a href="#cat-${c.name}" class="solid-text-gray hover:solid-text-cyan whitespace-nowrap transition-colors py-1 border-b-2 border-transparent hover:border-[#22d3ee]">
+                <a href="#cat-${c.name}" class="px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap hover:bg-dracula-current/50 hover:text-dracula-fg">
                     ${c.name}
                 </a>
             `).join('');
@@ -256,29 +251,20 @@
         function renderCategorizedNodes(nodes, isAiSearch = false) {
             dynamicZones.innerHTML = '';
             
-            // 如果是 AI 搜索结果，直接显示一个大的虚拟区块
             if (isAiSearch) {
-                if (nodes.length === 0) {
-                    dynamicZones.innerHTML = '<p class="solid-text-gray">> 神经元未匹配到相关结果。</p>';
-                    return;
-                }
+                if (nodes.length === 0) return dynamicZones.innerHTML = '<p class="text-dracula-comment">> 神经元未匹配到相关结果。</p>';
                 const zone = document.createElement('div');
                 zone.innerHTML = `
-                    <div class="flex items-center gap-2 mb-6">
-                        <h2 class="text-2xl font-bold solid-text-purple">AI 脑机检索结果<span class="solid-text-purple text-sm align-top ml-1">°</span></h2>
-                        <div class="h-px bg-[#b026ff]/20 flex-grow ml-4"></div>
+                    <div class="flex items-center gap-3 mb-6">
+                        <h2 class="text-2xl font-bold text-dracula-pink">AI 检索结果</h2>
+                        <div class="h-px bg-dracula-pink/30 flex-grow"></div>
                     </div>`;
-                const grid = buildGrid(nodes, 'purple');
-                zone.appendChild(grid);
+                zone.appendChild(buildGrid(nodes, 'pink'));
                 dynamicZones.appendChild(zone);
                 return;
             }
 
-            // 正常逻辑：按分类渲染
-            if (nodes.length === 0) {
-                dynamicZones.innerHTML = '<p class="solid-text-gray">> 扫描未命中任何战术节点。</p>';
-                return;
-            }
+            if (nodes.length === 0) return dynamicZones.innerHTML = '<p class="text-dracula-comment">> 扫描未命中任何战术节点。</p>';
 
             const grouped = {};
             globalCategories.forEach(c => grouped[c.name] = []);
@@ -289,52 +275,51 @@
 
             for (const [catName, catNodes] of Object.entries(grouped)) {
                 if (catNodes.length === 0) continue;
-
                 const zone = document.createElement('div');
-                // 【核心：锚点跳转支持】赋予防区唯一的 ID，并加入 scroll-mt 预留出顶部导航栏的高度
+                // 丝滑滚动锚点支持：预留顶部导航栏高度
                 zone.id = `cat-${catName}`;
-                zone.className = "scroll-mt-40 md:scroll-mt-36"; 
-                
+                zone.className = "scroll-mt-48 md:scroll-mt-36"; 
                 zone.innerHTML = `
-                    <div class="flex items-center gap-2 mb-6">
-                        <h2 class="text-2xl font-bold solid-text-white">${catName}<span class="solid-text-cyan text-sm align-top ml-1">°</span></h2>
-                        <div class="h-px bg-[#22d3ee]/20 flex-grow ml-4"></div>
+                    <div class="flex items-center gap-3 mb-6">
+                        <h2 class="text-2xl font-bold text-dracula-cyan">${catName}</h2>
+                        <div class="h-px bg-dracula-cyan/20 flex-grow"></div>
                     </div>`;
-                
-                const grid = buildGrid(catNodes, 'cyan');
-                zone.appendChild(grid);
+                zone.appendChild(buildGrid(catNodes, 'cyan'));
                 dynamicZones.appendChild(zone);
             }
         }
 
-        // 抽取出来的卡片渲染网格组件
         function buildGrid(nodesArray, theme = 'cyan') {
             const grid = document.createElement('div');
             grid.className = 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6';
-            const themeColor = theme === 'purple' ? '#b026ff' : '#22d3ee';
+            
+            // Dracula Theme 配色映射
+            const tColor = theme === 'pink' ? 'text-dracula-pink' : 'text-dracula-cyan';
+            const bColor = theme === 'pink' ? 'hover:border-dracula-pink/50' : 'hover:border-dracula-cyan/50';
+            const bgLight = theme === 'pink' ? 'bg-dracula-pink/10' : 'bg-dracula-cyan/10';
 
             nodesArray.forEach(link => {
                 const card = document.createElement('a');
                 card.href = link.url; card.target = '_blank';
-                card.className = `relative glass-panel rounded-xl p-5 flex items-center gap-4 hover:bg-white/5 hover:border-[${themeColor}]/50 transition-all duration-300 group w-full min-w-0 overflow-hidden block`;
+                card.className = `relative glass-panel rounded-xl p-5 flex items-center gap-4 hover:bg-white/5 ${bColor} transition-all duration-300 group w-full min-w-0 overflow-hidden block`;
                 
                 const iconPreview = link.icon && link.icon.startsWith('http')
-                    ? `<img src="${link.icon}" loading="lazy" alt="icon" class="w-10 h-10 rounded-md object-contain filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)] group-hover:scale-110 transition-transform duration-300" onerror="this.onerror=null; this.outerHTML='<i class=\\'fa-solid fa-link text-xl group-hover:scale-110 transition-transform duration-300\\'></i>'">`
+                    ? `<img src="${link.icon}" loading="lazy" alt="icon" class="w-10 h-10 rounded-md object-contain filter drop-shadow-md group-hover:scale-110 transition-transform duration-300" onerror="this.onerror=null; this.outerHTML='<i class=\\'fa-solid fa-link text-xl group-hover:scale-110 transition-transform duration-300\\'></i>'">`
                     : `<i class="${link.icon || 'fa-solid fa-link'} text-xl group-hover:scale-110 transition-transform duration-300"></i>`;
 
                 const adminHtml = isAdmin ? `
                     <div class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                        <button onclick="deleteNode(event, ${link.id}, '${link.title.replace(/'/g, "\\'")}')" class="text-xs solid-text-crimson hover:text-white bg-[#030712] px-2 py-1 rounded shadow"><i class="fa-solid fa-trash"></i></button>
+                        <button onclick="deleteNode(event, ${link.id}, '${link.title.replace(/'/g, "\\'")}')" class="text-xs text-dracula-red hover:text-white bg-dracula-dark border border-dracula-current px-2 py-1 rounded shadow"><i class="fa-solid fa-trash"></i></button>
                     </div>` : '';
 
                 card.innerHTML = `
                     ${adminHtml}
-                    <div class="flex-shrink-0 w-12 h-12 bg-[${themeColor}]/10 rounded-lg flex items-center justify-center text-[${themeColor}] shadow-inner">
+                    <div class="flex-shrink-0 w-12 h-12 ${bgLight} rounded-lg flex items-center justify-center ${tColor} shadow-inner">
                         ${iconPreview}
                     </div>
                     <div class="flex-1 min-w-0">
-                        <h3 class="text-base font-medium solid-text-white truncate group-hover:text-[${themeColor}] transition-colors">${link.title}</h3>
-                        <p class="text-xs solid-text-gray truncate mt-1">${link.description || '暂无特征数据'}</p>
+                        <h3 class="text-base font-medium text-dracula-fg truncate group-hover:${tColor} transition-colors">${link.title}</h3>
+                        <p class="text-xs text-dracula-comment truncate mt-1">${link.description || '暂无特征数据'}</p>
                     </div>
                 `;
                 grid.appendChild(card);
@@ -343,26 +328,23 @@
         }
 
         // =====================================
-        // 鉴权与业务交互
+        // 系统鉴权与业务交互
         // =====================================
         function updateAdminUI() {
             const btns = [document.getElementById('auth-btn-pc'), document.getElementById('auth-btn-mobile')];
             const adminLink = document.getElementById('admin-link');
-            
             btns.forEach(btn => {
                 if(!btn) return;
                 if (isAdmin) {
-                    btn.innerHTML = btn.id.includes('pc') ? '<i class="fa-solid fa-unlock mr-1"></i>LOGOUT' : '<i class="fa-solid fa-unlock"></i>';
-                    btn.className = "text-xs solid-text-crimson hover:text-white transition-colors font-bold px-3 py-1.5 border border-[#ef4444] rounded";
+                    btn.innerHTML = btn.id.includes('pc') ? '<i class="fa-solid fa-unlock mr-2"></i>LOGOUT' : '<i class="fa-solid fa-unlock"></i>';
+                    btn.className = "text-sm bg-dracula-red hover:bg-[#ff7373] text-dracula-dark font-bold px-4 py-1.5 rounded-lg transition-colors shadow-lg";
                 } else {
-                    btn.innerHTML = btn.id.includes('pc') ? '<i class="fa-solid fa-lock mr-1"></i>SYS_OP' : '<i class="fa-solid fa-lock"></i>';
-                    btn.className = "text-xs solid-text-gray hover:solid-text-cyan transition-colors font-bold px-3 py-1.5 border border-transparent";
+                    btn.innerHTML = btn.id.includes('pc') ? '<i class="fa-solid fa-lock mr-2"></i>SYS_OP' : '<i class="fa-solid fa-lock"></i>';
+                    btn.className = "text-sm bg-dracula-purple hover:bg-dracula-pink text-dracula-dark font-bold px-4 py-1.5 rounded-lg transition-colors shadow-lg";
                 }
             });
-            
             if(isAdmin) adminLink.classList.remove('hidden');
             else adminLink.classList.add('hidden');
-            
             renderCategorizedNodes(globalNodes);
         }
 
@@ -370,9 +352,9 @@
             if (isAdmin) { 
                 sessionStorage.removeItem('sys_op_token'); isAdmin = false; 
             } else { 
-                const pwd = await SysUI.showPrompt('系统鉴权 (SYS_AUTH)', '请输入超级管理员密钥:', 'password');
+                const pwd = await SysUI.showPrompt('System Auth', '请输入超级管理员密钥:', 'password');
                 if (pwd === 'root') { sessionStorage.setItem('sys_op_token', 'AUTHORIZED'); isAdmin = true; } 
-                else if (pwd !== null) { await SysUI.showConfirm('鉴权失败', '密钥无效，终端已被锁死。', true); }
+                else if (pwd !== null) { await SysUI.showConfirm('Access Denied', '密钥无效，连接已被拒绝。', true); }
             }
             updateAdminUI();
         }
@@ -390,7 +372,9 @@
             } catch (error) {}
         };
 
-        // 搜索逻辑
+        // =====================================
+        // 搜索引擎接入
+        // =====================================
         let aiTimeout = null;
         document.getElementById('ai-filter-input').addEventListener('input', (e) => {
             clearTimeout(aiTimeout);
@@ -404,7 +388,7 @@
                 try {
                     const res = await fetch('/api/search?q=' + encodeURIComponent(query));
                     const aiNodes = await res.json();
-                    renderCategorizedNodes(aiNodes, true); // true 代表是 AI 渲染模式
+                    renderCategorizedNodes(aiNodes, true); 
                 } catch(e) {}
             }, 800);
         });
@@ -414,14 +398,13 @@
             window.open(document.getElementById('engine-select').value + encodeURIComponent(document.getElementById('web-search-input').value), '_blank');
         });
 
-        // 时钟
         const gTime = new Date('2024-01-01T00:00:00Z').getTime();
         setInterval(() => {
             const d = new Date().getTime() - gTime;
-            document.getElementById('hud-uptime').textContent = `系统存活 ${Math.floor(d/86400000)}天 ${Math.floor((d%86400000)/3600000)}时 ${Math.floor((d%3600000)/60000)}分`;
-        }, 60000); // 性能优化：每分钟更新即可
+            document.getElementById('hud-uptime').textContent = `系统存活 ${Math.floor(d/86400000)}天 ${Math.floor((d%86400000)/3600000)}时`;
+        }, 60000); 
         const dInit = new Date().getTime() - gTime;
-        document.getElementById('hud-uptime').textContent = `系统存活 ${Math.floor(dInit/86400000)}天 ${Math.floor((dInit%86400000)/3600000)}时 ${Math.floor((dInit%3600000)/60000)}分`;
+        document.getElementById('hud-uptime').textContent = `系统存活 ${Math.floor(dInit/86400000)}天 ${Math.floor((dInit%86400000)/3600000)}时`;
 
         updateAdminUI();
         fetchSystemData();
