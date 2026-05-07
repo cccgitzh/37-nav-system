@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>37° Nav - 舰长控制台 [深度重构版]</title>
+    <title>37° Nav - 舰长控制台 [秩序重构版]</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
@@ -29,7 +29,7 @@
         h2 { margin-top: 0; color: var(--brand-cyan); border-bottom: 1px solid var(--glass-border); padding-bottom: 15px; font-size: 1.3rem;}
         .form-group { margin-bottom: 20px; }
         label { display: block; margin-bottom: 8px; color: var(--text-main); font-size: 0.9rem;}
-        input, select, textarea { width: 100%; padding: 12px; background: rgba(0,0,0,0.5); border: 1px solid var(--glass-border); color: var(--brand-cyan); border-radius: 6px; box-sizing: border-box; font-family: 'Courier New', Courier, monospace; transition: all 0.3s;}
+        input, select, textarea { width: 100%; padding: 12px; background: rgba(0,0,0,0.5); border: 1px solid var(--glass-border); color: var(--brand-cyan); border-radius: 6px; box-sizing: border-box; font-family: 'Courier New', Courier, monospace; transition: border-color 0.3s, box-shadow 0.3s;}
         input:focus, select:focus, textarea:focus { outline: none; border-color: var(--brand-cyan); box-shadow: 0 0 10px rgba(0,242,254,0.1);}
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
         
@@ -55,15 +55,19 @@
         .btn-icon.edit:hover { background: var(--brand-emerald); color: white; border-color: var(--brand-emerald); box-shadow: 0 0 10px rgba(16,185,129,0.4);}
         .btn-icon.del:hover { background: var(--brand-red); color: white; border-color: var(--brand-red); box-shadow: 0 0 10px rgba(255,71,87,0.4);}
 
-        /* 分类标签 */
-        .cat-tag { background: rgba(176, 38, 255, 0.1); border: 1px solid rgba(176,38,255,0.3); padding: 6px 12px; border-radius: 6px; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 8px; color: #ddd;}
-        .cat-tag i { cursor: pointer; opacity: 0.6; transition: opacity 0.2s; }
-        .cat-tag i:hover { opacity: 1; }
+        /* 类别拖拽标签样式 */
+        .cat-tag { background: rgba(176, 38, 255, 0.1); border: 1px solid rgba(176,38,255,0.3); padding: 6px 12px; border-radius: 6px; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 8px; color: #ddd; transition: all 0.2s; user-select: none;}
+        .cat-tag i.action-icon { cursor: pointer; opacity: 0.6; transition: opacity 0.2s; }
+        .cat-tag i.action-icon:hover { opacity: 1; }
         .cat-tag i.edit:hover { color: var(--brand-emerald); }
         .cat-tag i.del:hover { color: var(--brand-red); }
+        
+        /* 拖拽状态特效 */
+        .cat-tag.dragging { opacity: 0.5; border-style: dashed; transform: scale(0.95); background: rgba(176, 38, 255, 0.2); }
+        .cat-tag.drag-over { border-color: var(--brand-cyan); box-shadow: -5px 0 0 var(--brand-cyan); }
 
         /* =========================================
-           赛博全息模态框系统 (替代原生 Alert/Confirm)
+           赛博全息模态框系统
            ========================================= */
         .cyber-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; z-index: 9999; opacity: 0; pointer-events: none; transition: opacity 0.2s ease; }
         .cyber-overlay.active { opacity: 1; pointer-events: all; }
@@ -86,13 +90,13 @@
     <div class="admin-container">
         
         <div class="panel" style="border-color: var(--brand-purple);">
-            <h2 style="color: var(--brand-purple);"><i class="fa-solid fa-folder-tree"></i> 类别防区设置 (Category)</h2>
+            <h2 style="color: var(--brand-purple);"><i class="fa-solid fa-folder-tree"></i> 类别阵列控制 (Drag to Sort)</h2>
             <div class="url-group mb-4" style="margin-bottom: 20px;">
-                <input type="text" id="new-cat-name" placeholder="> 输入新防区名称..." style="border-color: rgba(176,38,255,0.4);">
+                <input type="text" id="new-cat-name" placeholder="> 输入新类别名称..." style="border-color: rgba(176,38,255,0.4);">
                 <button onclick="addCategory()" class="btn btn-parse">ADD_CAT</button>
             </div>
-            <div id="cat-list" style="display: flex; flex-wrap: wrap; gap: 12px;">
-                <p style="color: var(--brand-purple); font-size: 0.9rem;">> 正在同步防区数据...</p>
+            <div id="cat-list" style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center;">
+                <p style="color: var(--brand-purple); font-size: 0.9rem;">> 正在同步引擎数据...</p>
             </div>
         </div>
 
@@ -118,7 +122,7 @@
         </div>
 
         <div class="panel">
-            <h2><i class="fa-solid fa-server"></i> 节点阵列管理</h2>
+            <h2><i class="fa-solid fa-server"></i> 全网节点阵列管理</h2>
             <div class="node-list" id="node-list-container">
                 <p style="color: var(--brand-cyan);">> 正在检索节点数据...</p>
             </div>
@@ -129,7 +133,7 @@
 
     <script>
         /* =========================================================
-           赛博模态框 UI 引擎 (彻底取代 alert, confirm, prompt)
+           赛博模态框 UI 引擎
            ========================================================= */
         const SysUI = {
             createContainer(id) {
@@ -152,7 +156,7 @@
                         <div class="cyber-modal">
                             <div class="cyber-modal-title" style="color:var(--brand-cyan);"><i class="fa-solid fa-terminal"></i> ${title}</div>
                             <div class="cyber-modal-msg">${msg}</div>
-                            <input type="text" id="prompt-input" value="${defaultVal}" style="margin-bottom: 20px;">
+                            <input type="text" id="prompt-input" value="${defaultVal}" style="width: 100%; padding: 12px; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.2); color: #22d3ee; border-radius: 6px; box-sizing: border-box; font-family: inherit; margin-bottom: 20px; outline: none;">
                             <div class="cyber-modal-actions">
                                 <button class="btn-modal cancel" id="p-cancel">CANCEL</button>
                                 <button class="btn-modal confirm" id="p-ok">OVERRIDE</button>
@@ -190,11 +194,9 @@
                     overlay.querySelector('#c-ok').onclick = () => { this.close(overlay); resolve(true); };
                 });
             },
-            // 定制化的全息节点编辑模态框
             showNodeEditor(node) {
                 return new Promise(resolve => {
                     const overlay = this.createContainer('cyber-editor');
-                    // 生成分类下拉选项
                     const catOptions = globalCategories.map(c => `<option value="${c.name}" ${c.name===node.category?'selected':''}>${c.name}</option>`).join('');
                     
                     overlay.innerHTML = `
@@ -205,7 +207,7 @@
                                 <div class="form-group"><label>网址 URL</label><input type="url" id="e-url" value="${node.url}" required></div>
                                 <div class="form-group"><label>描述摘要</label><textarea id="e-desc" rows="2">${node.description||''}</textarea></div>
                                 <div class="grid-2">
-                                    <div class="form-group"><label>图标链接/FA</label><input type="text" id="e-icon" value="${node.icon||''}"></div>
+                                    <div class="form-group"><label>图标链接/FA代码</label><input type="text" id="e-icon" value="${node.icon||''}"></div>
                                     <div class="form-group"><label>分类</label><select id="e-category">${catOptions}</select></div>
                                 </div>
                                 <div class="cyber-modal-actions" style="margin-top: 10px;">
@@ -221,13 +223,9 @@
                     overlay.querySelector('#cyber-edit-form').onsubmit = (e) => {
                         e.preventDefault();
                         const updatedNode = {
-                            id: node.id,
-                            title: overlay.querySelector('#e-title').value,
-                            url: overlay.querySelector('#e-url').value,
-                            description: overlay.querySelector('#e-desc').value,
-                            icon: overlay.querySelector('#e-icon').value,
-                            category: overlay.querySelector('#e-category').value,
-                            color_theme: 'cyan' // 默认统一配色
+                            id: node.id, title: overlay.querySelector('#e-title').value, url: overlay.querySelector('#e-url').value,
+                            description: overlay.querySelector('#e-desc').value, icon: overlay.querySelector('#e-icon').value,
+                            category: overlay.querySelector('#e-category').value, color_theme: 'cyan'
                         };
                         this.close(overlay);
                         resolve(updatedNode);
@@ -253,22 +251,81 @@
                 renderNodes(globalNodes);
             } catch (error) {
                 document.getElementById('cat-list').innerHTML = '<span style="color:#ff4757">> API 链路断开</span>';
-                document.getElementById('node-list-container').innerHTML = '<p style="color: #ff4757;">> 获取节点失败。请检查 /api/nodes 接口。</p>';
+                document.getElementById('node-list-container').innerHTML = '<p style="color: #ff4757;">> 获取节点失败。</p>';
             }
         }
 
-        // 2. 分类管理 (支持修、删、增)
+        // 2. 类别控制 (支持拖拽排序引擎)
         function renderCategories() {
             const list = document.getElementById('cat-list');
             const nodeCatSelect = document.getElementById('node-category');
             
-            list.innerHTML = globalCategories.map(c => `
-                <div class="cat-tag">
+            list.innerHTML = '';
+            
+            globalCategories.forEach((c, index) => {
+                const tag = document.createElement('div');
+                tag.className = 'cat-tag';
+                tag.draggable = true; // 开启重力引擎
+                
+                tag.innerHTML = `
+                    <i class="fa-solid fa-grip-lines" style="cursor:grab; opacity:0.4; margin-right:2px;" title="按住拖拽排序"></i>
                     <span>${c.name}</span>
-                    <i class="fa-solid fa-pen edit" title="重命名" onclick="editCategory(${c.id}, '${c.name}')"></i>
-                    <i class="fa-solid fa-xmark del" title="销毁" onclick="deleteCategory(${c.id}, '${c.name}')"></i>
-                </div>
-            `).join('');
+                    <i class="fa-solid fa-pen action-icon edit" title="重命名" onclick="editCategory(${c.id}, '${c.name}')"></i>
+                    <i class="fa-solid fa-xmark action-icon del" title="销毁" onclick="deleteCategory(${c.id}, '${c.name}')"></i>
+                `;
+
+                // HTML5 Drag & Drop 核心逻辑
+                tag.addEventListener('dragstart', (e) => {
+                    e.target.classList.add('dragging');
+                    e.dataTransfer.effectAllowed = 'move';
+                    e.dataTransfer.setData('text/plain', index);
+                });
+
+                tag.addEventListener('dragend', (e) => {
+                    e.target.classList.remove('dragging');
+                });
+
+                tag.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'move';
+                    tag.classList.add('drag-over');
+                });
+
+                tag.addEventListener('dragleave', () => {
+                    tag.classList.remove('drag-over');
+                });
+
+                tag.addEventListener('drop', async (e) => {
+                    e.preventDefault();
+                    tag.classList.remove('drag-over');
+                    
+                    const fromIndex = parseInt(e.dataTransfer.getData('text/plain'));
+                    const toIndex = index;
+
+                    if (fromIndex === toIndex) return;
+
+                    // 算法：数组内存重排
+                    const item = globalCategories.splice(fromIndex, 1)[0];
+                    globalCategories.splice(toIndex, 0, item);
+
+                    // 先在前端瞬间渲染，提供无缝体验
+                    renderCategories();
+
+                    // 静默同步到 D1 后端 (利用你刚才升级的 PUT /api/categories 接口)
+                    try {
+                        await fetch('/api/categories', {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(globalCategories)
+                        });
+                        fetchSystemData(); // 确保数据一致性
+                    } catch (err) {
+                        console.error('排序同步失败', err);
+                    }
+                });
+
+                list.appendChild(tag);
+            });
 
             nodeCatSelect.innerHTML = globalCategories.map(c => `<option value="${c.name}">${c.name}</option>`).join('') || '<option value="Default">Default</option>';
         }
@@ -282,7 +339,7 @@
         }
 
         async function editCategory(id, oldName) {
-            const newName = await SysUI.showPrompt('类别重命名', `当前名称: [ ${oldName} ]<br>请输入新的类别名称:`, oldName);
+            const newName = await SysUI.showPrompt('防区重命名', `当前名称: [ ${oldName} ]<br>请输入新的类别名称:`, oldName);
             if (!newName || newName === oldName) return;
             await fetch('/api/categories', { method: 'PUT', body: JSON.stringify({ id, name: newName }) });
             fetchSystemData();
@@ -295,7 +352,7 @@
             fetchSystemData();
         }
 
-        // 3. 节点管理 (图裂修复 & 独立编辑)
+        // 3. 节点管理
         function renderNodes(links) {
             const container = document.getElementById('node-list-container');
             container.innerHTML = ''; 
@@ -304,7 +361,6 @@
                 return;
             }
             links.forEach(link => {
-                // 【核心修复】：加上了 onerror 兜底逻辑，图片一旦加载失败（图裂），立刻变身为 FontAwesome 备用图标！
                 const iconHtml = link.icon && link.icon.startsWith('http') 
                     ? `<img src="${link.icon}" style="width:26px; height:26px; border-radius:6px; object-fit:contain;" onerror="this.onerror=null; this.outerHTML='<i class=\\'fa-solid fa-link\\' style=\\'font-size:18px;\\'></i>'">` 
                     : `<i class="${link.icon || 'fa-solid fa-link'}" style="font-size:18px;"></i>`;
@@ -336,11 +392,9 @@
             fetchSystemData();
         }
 
-        // 彻底修复之前字符串传递报错的 BUG，直接用 ID 在内存中查找数据并交给弹窗处理
         window.triggerNodeEdit = async function(id) {
             const node = globalNodes.find(n => n.id === id);
             if (!node) return;
-            
             const updatedNode = await SysUI.showNodeEditor(node);
             if (updatedNode) {
                 await fetch('/api/nodes', { method: 'PUT', body: JSON.stringify(updatedNode) });
@@ -358,7 +412,7 @@
                 description: document.getElementById('node-desc').value,
                 category: document.getElementById('node-category').value,
                 icon: document.getElementById('node-icon').value,
-                color_theme: 'cyan' // 彻底废弃主题选择，强制统一
+                color_theme: 'cyan'
             };
             const response = await fetch('/api/nodes', { method: 'POST', body: JSON.stringify(payload) });
             if (response.ok) {
