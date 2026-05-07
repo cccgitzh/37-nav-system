@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>37° Nav | 遥测终端 4.0</title>
+    <title>37° Nav | 遥测终端 5.0</title>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -29,7 +29,6 @@
     </script>
 
     <style>
-        /* 极客黑曜石美学：纯 CSS 量子网格，拒绝 WebGL 性能消耗 */
         body {
             background-color: #030712;
             background-image: 
@@ -37,11 +36,10 @@
                 linear-gradient(90deg, rgba(34, 211, 238, 0.03) 1px, transparent 1px);
             background-size: 30px 30px;
             background-attachment: fixed;
-            
             font-family: 'JetBrains Mono', monospace;
             -webkit-font-smoothing: antialiased;
             color: #ffffff;
-            margin-bottom: 40px; /* 避开 HUD 遮挡 */
+            margin-bottom: 50px;
         }
 
         .glass-panel {
@@ -51,7 +49,6 @@
             border: 1px solid rgba(255, 255, 255, 0.05);
         }
 
-        /* 纯实心高对比度渲染类 */
         .solid-text-white { color: #ffffff !important; }
         .solid-text-cyan { color: #22d3ee !important; }
         .solid-text-emerald { color: #10b981 !important; }
@@ -61,9 +58,14 @@
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: #030712; }
         ::-webkit-scrollbar-thumb { background: #22d3ee; border-radius: 3px; }
+
+        /* 原生模态框动画 */
+        dialog::backdrop { background: rgba(0,0,0,0.8); backdrop-filter: blur(5px); }
+        dialog[open] { animation: fadeZoom 0.2s ease-out; }
+        @keyframes fadeZoom { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
     </style>
 </head>
-<body class="min-h-screen flex flex-col items-center p-6 pb-16">
+<body class="min-h-screen flex flex-col items-center p-6 pb-16 relative">
 
     <header class="w-full max-w-7xl mb-8 flex flex-col md:flex-row justify-between items-end gap-6 border-b border-[#22d3ee]/20 pb-6">
         <div class="flex items-center gap-4">
@@ -72,321 +74,357 @@
                 <i class="fa-solid fa-cube text-2xl solid-text-cyan hidden"></i>
             </div>
             <div>
-                <h1 class="text-4xl font-extrabold solid-text-white tracking-tighter">
-                    37°<span class="solid-text-cyan ml-2">NAV_</span>
-                </h1>
+                <h1 class="text-4xl font-extrabold solid-text-white tracking-tighter">37°<span class="solid-text-cyan ml-2">NAV_</span></h1>
                 <p class="text-xs solid-text-emerald mt-1">> SYS.READY // EDGE AI TELEMETRY ACTIVE</p>
             </div>
         </div>
-
-        <button id="auth-btn" class="px-4 py-2 text-sm glass-panel solid-text-gray hover:solid-text-cyan border-l-2 border-transparent hover:border-[#22d3ee] transition-all">
+        <button id="auth-btn" class="px-4 py-2 text-sm glass-panel solid-text-gray hover:solid-text-cyan border-l-2 border-transparent hover:border-[#22d3ee] transition-all focus:outline-none">
             <i class="fa-solid fa-lock mr-2"></i>SYS_OP LOGIN
         </button>
     </header>
 
     <main class="w-full max-w-7xl flex flex-col gap-8">
-
+        
         <section class="glass-panel p-4 rounded-lg flex flex-col lg:flex-row gap-4">
-            
             <form id="web-search-form" class="flex-1 flex gap-2">
-                <select id="engine-select" class="bg-[#030712] border border-[#22d3ee]/30 solid-text-cyan px-3 py-2 rounded text-sm focus:outline-none focus:border-[#22d3ee]">
+                <select id="engine-select" class="bg-[#030712] border border-[#22d3ee]/30 solid-text-cyan px-3 py-2 rounded text-sm focus:outline-none">
                     <option value="https://www.google.com/search?q=">Google</option>
                     <option value="https://www.bing.com/search?q=">Bing</option>
                     <option value="https://github.com/search?q=">GitHub</option>
                 </select>
-                <input type="text" id="web-search-input" placeholder="外网检索跃迁..." required
-                    class="flex-1 bg-[#030712] border border-[#22d3ee]/30 solid-text-white px-4 py-2 rounded text-sm focus:outline-none focus:border-[#22d3ee]">
-                <button type="submit" class="bg-[#22d3ee]/10 border border-[#22d3ee] solid-text-cyan px-4 py-2 rounded hover:bg-[#22d3ee] hover:text-[#030712] transition-colors">
-                    <i class="fa-solid fa-rocket"></i>
-                </button>
+                <input type="text" id="web-search-input" placeholder="外网检索跃迁..." required class="flex-1 bg-[#030712] border border-[#22d3ee]/30 solid-text-white px-4 py-2 rounded text-sm focus:outline-none focus:border-[#22d3ee]">
+                <button type="submit" class="bg-[#22d3ee]/10 border border-[#22d3ee] solid-text-cyan px-4 py-2 rounded hover:bg-[#22d3ee] hover:text-[#030712] transition-colors"><i class="fa-solid fa-rocket"></i></button>
             </form>
-
             <div class="hidden lg:block w-px bg-[#22d3ee]/20"></div>
-
             <div class="flex-1 relative">
                 <i class="fa-solid fa-robot absolute left-4 top-1/2 -translate-y-1/2 solid-text-cyan"></i>
-                <input type="text" id="ai-filter-input" placeholder="输入需求唤醒 AI 语义检索，或即时过滤节点..." 
-                    class="w-full bg-[#030712] border border-[#22d3ee]/30 solid-text-white pl-10 pr-4 py-2 rounded text-sm focus:outline-none focus:border-[#22d3ee]">
+                <input type="text" id="ai-filter-input" placeholder="唤醒 AI 语义检索 / 即时过滤..." class="w-full bg-[#030712] border border-[#22d3ee]/30 solid-text-white pl-10 pr-4 py-2 rounded text-sm focus:outline-none focus:border-[#22d3ee]">
             </div>
         </section>
 
-        <section id="admin-panel" class="hidden glass-panel p-5 rounded-lg border-l-4 border-l-[#ef4444]">
-            <h2 class="text-sm font-bold solid-text-crimson mb-4">> OVERRIDE GRANTED: INJECT NEW NODE</h2>
-            <form id="add-node-form" class="flex flex-col gap-4">
-                
-                <div class="flex gap-2">
-                    <input type="url" id="node-url" placeholder="> 目标网址 (URL) [先填此项以激活渗透解析]" required class="flex-1 bg-[#030712] border border-white/20 solid-text-white px-3 py-2 text-sm focus:outline-none focus:border-[#ef4444]">
-                    <button type="button" id="btn-parse" class="bg-[#b026ff]/20 border border-[#b026ff] text-[#b026ff] px-4 py-2 hover:bg-[#b026ff] hover:text-white transition-colors text-sm font-bold whitespace-nowrap">
-                        <i class="fa-solid fa-wand-magic-sparkles"></i> AI 靶向解析
-                    </button>
+        <section id="admin-panel" class="hidden flex flex-col gap-6">
+            
+            <div class="glass-panel p-5 rounded-lg border-l-4 border-l-[#b026ff]">
+                <h2 class="text-sm font-bold text-[#b026ff] mb-4">> [1] CATEGORY MANAGEMENT (分类阵列维护)</h2>
+                <div class="flex gap-2 mb-4">
+                    <input type="text" id="new-cat-name" placeholder="新分类名称" class="flex-1 bg-[#030712] border border-white/20 px-3 py-2 text-sm focus:outline-none focus:border-[#b026ff]">
+                    <button onclick="addCategory()" class="bg-[#b026ff]/20 border border-[#b026ff] text-[#b026ff] px-4 py-2 hover:bg-[#b026ff] hover:text-white text-sm font-bold">ADD_CAT</button>
                 </div>
+                <div id="cat-list" class="grid grid-cols-2 md:grid-cols-4 gap-2">
+                    </div>
+            </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <input type="text" id="node-title" placeholder="网站名称 (自动填充)" required class="bg-[#030712] border border-white/20 solid-text-white px-3 py-2 text-sm focus:outline-none focus:border-[#ef4444]">
-                    <input type="text" id="node-desc" placeholder="AI 描述摘要 (自动填充)" class="md:col-span-2 bg-[#030712] border border-white/20 solid-text-white px-3 py-2 text-sm focus:outline-none focus:border-[#ef4444]">
-                    <input type="text" id="node-icon" placeholder="高清图标网址 (自动填充)" class="bg-[#030712] border border-white/20 solid-text-white px-3 py-2 text-sm focus:outline-none focus:border-[#ef4444]">
-                </div>
-
-                <div class="flex justify-between items-center mt-2">
-                    <p id="admin-status" class="text-xs solid-text-cyan">> 等待操作指令...</p>
-                    <button type="submit" class="bg-[#ef4444]/20 border border-[#ef4444] solid-text-crimson px-8 py-2 hover:bg-[#ef4444] hover:text-white transition-colors text-sm font-bold">
-                        [ 确认注入节点 ]
-                    </button>
-                </div>
-            </form>
+            <div class="glass-panel p-5 rounded-lg border-l-4 border-l-[#ef4444]">
+                <h2 class="text-sm font-bold solid-text-crimson mb-4">> [2] INJECT NEW NODE (新建战术节点)</h2>
+                <form id="add-node-form" class="flex flex-col gap-4">
+                    <div class="flex gap-2">
+                        <input type="url" id="node-url" placeholder="> 目标网址 (URL) [填此项激活渗透]" required class="flex-1 bg-[#030712] border border-white/20 px-3 py-2 text-sm focus:outline-none focus:border-[#ef4444]">
+                        <button type="button" id="btn-parse" class="bg-[#b026ff]/20 border border-[#b026ff] text-[#b026ff] px-4 py-2 hover:bg-[#b026ff] hover:text-white text-sm whitespace-nowrap"><i class="fa-solid fa-wand-magic-sparkles"></i> AI 解析</button>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <input type="text" id="node-title" placeholder="节点名称" required class="bg-[#030712] border border-white/20 px-3 py-2 text-sm focus:outline-none focus:border-[#ef4444]">
+                        <input type="text" id="node-desc" placeholder="特征摘要" class="md:col-span-2 bg-[#030712] border border-white/20 px-3 py-2 text-sm focus:outline-none focus:border-[#ef4444]">
+                        <input type="text" id="node-icon" placeholder="高清图标/FA" class="bg-[#030712] border border-white/20 px-3 py-2 text-sm focus:outline-none focus:border-[#ef4444]">
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <select id="node-category" class="bg-[#030712] border border-white/20 px-3 py-2 text-sm focus:outline-none focus:border-[#ef4444] text-white">
+                            </select>
+                        <select id="node-theme" class="bg-[#030712] border border-white/20 px-3 py-2 text-sm focus:outline-none focus:border-[#ef4444] text-white">
+                            <option value="cyan">赛博青 (Cyan)</option>
+                            <option value="purple">霓虹紫 (Purple)</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="mt-2 bg-[#ef4444]/20 border border-[#ef4444] solid-text-crimson py-2 hover:bg-[#ef4444] hover:text-white text-sm font-bold">[ 确认注入节点 ]</button>
+                </form>
+            </div>
         </section>
 
-        <h2 id="grid-status-title" class="text-xl font-bold solid-text-white border-b border-[#22d3ee]/20 pb-2"><i class="fa-solid fa-radar solid-text-cyan mr-2"></i>全网节点阵列</h2>
-        <div id="node-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-            <p class="text-sm solid-text-cyan col-span-full">> 正在从 D1 核心同步边缘节点数据...</p>
+        <div id="dynamic-zones" class="flex flex-col gap-8">
+            <p class="text-sm solid-text-cyan">> 正在连接 D1 核心，校准边缘节点...</p>
         </div>
 
     </main>
 
-    <footer class="fixed bottom-0 left-0 w-full h-10 bg-[#030712] border-t border-[#10b981]/30 flex items-center justify-between px-6 z-50 shadow-[0_-5px_20px_rgba(0,0,0,0.8)]">
+    <footer class="fixed bottom-0 left-0 w-full h-10 bg-[#030712] border-t border-[#10b981]/30 flex items-center justify-between px-6 z-40">
         <div class="flex items-center gap-3">
             <i class="fa-solid fa-heart-pulse solid-text-emerald animate-pulse text-base"></i>
             <span class="text-xs font-bold solid-text-emerald tracking-wider hidden sm:inline">TELEMETRY_LINK_ACTIVE</span>
         </div>
-        <div id="hud-uptime" class="text-xs font-bold solid-text-cyan tracking-wider">
-            </div>
+        <div id="hud-uptime" class="text-xs font-bold solid-text-cyan tracking-wider"></div>
     </footer>
 
-    <script>
-        /* =======================================================================
-         * 1. 核心状态总线
-         * ======================================================================= */
-        let globalNodes = []; // 存储从 D1 拉取的全量数据
-        let isAdmin = sessionStorage.getItem('sys_op_token') === 'AUTHORIZED';
-        
-        const gridEl = document.getElementById('node-grid');
-        const gridTitle = document.getElementById('grid-status-title');
-        const adminStatus = document.getElementById('admin-status');
+    <dialog id="edit-node-modal" class="bg-[#030712] border border-[#22d3ee] shadow-[0_0_30px_rgba(34,211,238,0.2)] p-6 rounded-lg w-[90%] max-w-lg solid-text-white z-50">
+        <h3 class="text-lg font-bold solid-text-cyan border-b border-[#22d3ee]/30 pb-2 mb-4">NODE_EDIT_OVERRIDE (覆写节点)</h3>
+        <form id="edit-node-form" class="flex flex-col gap-3">
+            <input type="hidden" id="edit-id">
+            <input type="text" id="edit-title" required class="bg-black/50 border border-white/20 px-3 py-2 text-sm focus:outline-none focus:border-[#22d3ee]">
+            <input type="url" id="edit-url" required class="bg-black/50 border border-white/20 px-3 py-2 text-sm focus:outline-none focus:border-[#22d3ee]">
+            <textarea id="edit-desc" rows="2" class="bg-black/50 border border-white/20 px-3 py-2 text-sm focus:outline-none focus:border-[#22d3ee]"></textarea>
+            <input type="text" id="edit-icon" class="bg-black/50 border border-white/20 px-3 py-2 text-sm focus:outline-none focus:border-[#22d3ee]">
+            <select id="edit-category" class="bg-black/50 border border-white/20 px-3 py-2 text-sm focus:outline-none focus:border-[#22d3ee]"></select>
+            <select id="edit-theme" class="bg-black/50 border border-white/20 px-3 py-2 text-sm focus:outline-none focus:border-[#22d3ee]">
+                <option value="cyan">赛博青</option>
+                <option value="purple">霓虹紫</option>
+            </select>
+            <div class="flex justify-end gap-3 mt-4">
+                <button type="button" onclick="document.getElementById('edit-node-modal').close()" class="px-4 py-2 border border-white/20 text-sm hover:bg-white/10">CANCEL</button>
+                <button type="submit" class="px-4 py-2 bg-[#22d3ee]/20 border border-[#22d3ee] solid-text-cyan hover:bg-[#22d3ee] hover:text-black font-bold text-sm">UPDATE_NODE</button>
+            </div>
+        </form>
+    </dialog>
 
-        /* =======================================================================
-         * 2. D1 数据库交互层
-         * ======================================================================= */
-        // 加载全部节点
-        async function loadAllLinks() {
+    <script>
+        let globalNodes = [];
+        let globalCategories = [];
+        let isAdmin = sessionStorage.getItem('sys_op_token') === 'AUTHORIZED';
+        const dynamicZones = document.getElementById('dynamic-zones');
+
+        // ==========================================
+        // 初始化数据与架构渲染
+        // ==========================================
+        async function fetchSystemData() {
             try {
-                const response = await fetch('/api/links');
-                globalNodes = await response.json();
-                renderNodes(globalNodes);
-            } catch (error) {
-                gridEl.innerHTML = '<p class="solid-text-crimson">> [错误] 无法连接到 D1 数据库链路。</p>';
+                // 并发拉取新架构下的分类与节点
+                const [catRes, nodeRes] = await Promise.all([ fetch('/api/categories'), fetch('/api/nodes') ]);
+                globalCategories = await catRes.json();
+                globalNodes = await nodeRes.json();
+                
+                populateCategorySelectors();
+                renderCategorizedNodes(globalNodes);
+                if(isAdmin) renderCategoryManager();
+            } catch (e) {
+                dynamicZones.innerHTML = '<p class="solid-text-crimson">> [FATAL] 数据核心链路断开。</p>';
             }
         }
 
-        // 销毁节点 (联动 API)
-        window.deleteNode = async function(e, id, title) {
-            e.preventDefault(); 
-            if(!confirm(`> 警告：是否永久销毁 [ ${title} ] 节点？`)) return;
+        function populateCategorySelectors() {
+            const addSel = document.getElementById('node-category');
+            const editSel = document.getElementById('edit-category');
+            const html = globalCategories.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
+            addSel.innerHTML = html || '<option value="Default">Default</option>';
+            editSel.innerHTML = html || '<option value="Default">Default</option>';
+        }
 
-            try {
-                const response = await fetch('/api/delete', {
-                    method: 'DELETE',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ id: id })
-                });
-                if (response.ok) {
-                    loadAllLinks(); // 重新拉取渲染
-                }
-            } catch (error) {
-                alert('> 连接错误。');
+        // 分类分组渲染防挤压阵列
+        function renderCategorizedNodes(nodes) {
+            dynamicZones.innerHTML = '';
+            if (nodes.length === 0) {
+                dynamicZones.innerHTML = '<p class="solid-text-gray">> 无匹配战术节点。</p>';
+                return;
             }
+
+            // 按分类组合数据
+            const grouped = {};
+            globalCategories.forEach(c => grouped[c.name] = []);
+            nodes.forEach(n => {
+                if(!grouped[n.category]) grouped[n.category] = [];
+                grouped[n.category].push(n);
+            });
+
+            // 生成区块
+            for (const [catName, catNodes] of Object.entries(grouped)) {
+                if (catNodes.length === 0) continue; // 隐藏空分类
+
+                const zone = document.createElement('div');
+                zone.innerHTML = `<h2 class="text-xl font-bold solid-text-white border-b border-[#22d3ee]/20 pb-2 mb-4"><i class="fa-solid fa-folder-tree solid-text-cyan mr-2"></i>${catName}</h2>`;
+                
+                const grid = document.createElement('div');
+                grid.className = 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5';
+
+                catNodes.forEach(link => {
+                    const card = document.createElement('a');
+                    card.href = link.url;
+                    card.target = '_blank';
+                    card.className = `relative glass-panel rounded-lg border-l-4 border-l-[${link.color_theme==='purple'?'#b026ff':'#22d3ee'}] p-4 flex items-center gap-4 hover:bg-white/5 hover:-translate-y-1 transition-all group w-full min-w-0 overflow-hidden block`;
+                    
+                    const iconPreview = link.icon && link.icon.startsWith('http')
+                        ? `<img src="${link.icon}" class="w-8 h-8 rounded-md object-contain filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]">`
+                        : `<i class="${link.icon || 'fa-solid fa-link'} text-xl"></i>`;
+
+                    // 【核心】节点级独立 CRUD：加入修改(Edit)和删除(Delete)双按钮
+                    const adminHtml = isAdmin ? `
+                        <div class="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                            <button onclick="openEditModal(event, ${encodeURIComponent(JSON.stringify(link))})" class="text-xs text-[#22d3ee] bg-[#030712] px-2 py-1 rounded shadow hover:bg-[#22d3ee] hover:text-black"><i class="fa-solid fa-pen"></i></button>
+                            <button onclick="deleteNode(event, ${link.id}, '${link.title}')" class="text-xs text-[#ef4444] bg-[#030712] px-2 py-1 rounded shadow hover:bg-[#ef4444] hover:text-white"><i class="fa-solid fa-trash"></i></button>
+                        </div>
+                    ` : '';
+
+                    card.innerHTML = `
+                        ${adminHtml}
+                        <div class="flex-shrink-0 w-12 h-12 bg-[#22d3ee]/10 rounded-lg flex items-center justify-center solid-text-cyan shadow-inner">${iconPreview}</div>
+                        <div class="flex-1 min-w-0">
+                            <h3 class="text-base font-bold solid-text-white truncate">${link.title}</h3>
+                            <p class="text-xs solid-text-gray truncate mt-1 leading-relaxed">${link.description || ''}</p>
+                        </div>
+                    `;
+                    grid.appendChild(card);
+                });
+                zone.appendChild(grid);
+                dynamicZones.appendChild(zone);
+            }
+        }
+
+        // ==========================================
+        // 分类独立管理系统 (CRUD)
+        // ==========================================
+        function renderCategoryManager() {
+            const list = document.getElementById('cat-list');
+            list.innerHTML = globalCategories.map(c => `
+                <div class="bg-black/50 border border-white/10 px-3 py-2 flex justify-between items-center rounded text-sm">
+                    <span class="truncate pr-2">${c.name}</span>
+                    <button onclick="deleteCategory(${c.id}, '${c.name}')" class="text-[#ef4444] hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+            `).join('');
+        }
+
+        async function addCategory() {
+            const name = document.getElementById('new-cat-name').value.trim();
+            if(!name) return;
+            await fetch('/api/categories', { method: 'POST', body: JSON.stringify({ name }) });
+            document.getElementById('new-cat-name').value = '';
+            fetchSystemData();
+        }
+
+        async function deleteCategory(id, name) {
+            if(!confirm(`> 销毁分类 [ ${name} ] ? (此操作不会删除其下的节点)`)) return;
+            await fetch('/api/categories', { method: 'DELETE', body: JSON.stringify({ id }) });
+            fetchSystemData();
+        }
+
+        // ==========================================
+        // 节点独立管理系统 (Node CRUD)
+        // ==========================================
+        async function deleteNode(e, id, title) {
+            e.preventDefault(); 
+            if(!confirm(`> 永久抹除节点 [ ${title} ] ?`)) return;
+            await fetch('/api/nodes', { method: 'DELETE', body: JSON.stringify({ id }) });
+            fetchSystemData();
+        }
+
+        // 打开修改面板
+        window.openEditModal = function(e, nodeStr) {
+            e.preventDefault();
+            const node = JSON.parse(decodeURIComponent(nodeStr));
+            document.getElementById('edit-id').value = node.id;
+            document.getElementById('edit-title').value = node.title;
+            document.getElementById('edit-url').value = node.url;
+            document.getElementById('edit-desc').value = node.description;
+            document.getElementById('edit-icon').value = node.icon;
+            document.getElementById('edit-category').value = node.category;
+            document.getElementById('edit-theme').value = node.color_theme;
+            document.getElementById('edit-node-modal').showModal();
         };
 
-        /* =======================================================================
-         * 3. 防挤压卡片渲染引擎 (核心布局层)
-         * ======================================================================= */
-        function renderNodes(nodesToRender) {
-            gridEl.innerHTML = '';
-            if (nodesToRender.length === 0) {
-                gridEl.innerHTML = '<p class="solid-text-gray">> 区域内未探测到有效节点。</p>';
-                return;
-            }
-
-            nodesToRender.forEach(link => {
-                const card = document.createElement('a');
-                card.href = link.url;
-                card.target = '_blank';
-                // 严苛防挤压：w-full min-w-0 overflow-hidden 缺一不可
-                card.className = `relative glass-panel rounded-lg border-l-4 border-l-[#22d3ee] p-4 flex items-center gap-4 hover:bg-white/5 hover:-translate-y-1 transition-all group w-full min-w-0 overflow-hidden block`;
-                
-                // 高清图标/FA图标智能识别 (保留了上个版本的极客重构)
-                const iconPreview = link.icon && link.icon.startsWith('http')
-                    ? `<img src="${link.icon}" alt="icon" class="w-8 h-8 rounded-md object-contain filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]">`
-                    : `<i class="${link.icon || 'fa-solid fa-link'} text-xl"></i>`;
-
-                // 权限编辑态
-                const adminHtml = isAdmin ? `
-                    <div class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                        <button onclick="deleteNode(event, ${link.id}, '${link.title}')" class="text-xs solid-text-crimson hover:text-white bg-[#030712] px-2 py-1 rounded shadow"><i class="fa-solid fa-trash"></i></button>
-                    </div>
-                ` : '';
-
-                // flex-shrink-0 保护图标不被压缩，truncate 保证文字溢出显示省略号
-                card.innerHTML = `
-                    ${adminHtml}
-                    <div class="flex-shrink-0 w-12 h-12 bg-[#22d3ee]/10 rounded-lg flex items-center justify-center solid-text-cyan shadow-inner">
-                        ${iconPreview}
-                    </div>
-                    <div class="flex-1 min-w-0">
-                        <h3 class="text-base font-bold solid-text-white truncate">${link.title}</h3>
-                        <p class="text-xs solid-text-gray truncate mt-1 leading-relaxed">${link.description || '暂无数据'}</p>
-                    </div>
-                `;
-                gridEl.appendChild(card);
-            });
-        }
-
-        /* =======================================================================
-         * 4. AI 语义检索与本地过滤 (双路架构)
-         * ======================================================================= */
-        let aiTimeout = null;
-        document.getElementById('ai-filter-input').addEventListener('input', (e) => {
-            clearTimeout(aiTimeout);
-            const query = e.target.value.trim();
-            
-            if (query.length === 0) {
-                gridTitle.innerHTML = '<i class="fa-solid fa-radar solid-text-cyan mr-2"></i>全网节点阵列';
-                renderNodes(globalNodes);
-                return;
-            }
-
-            // 1. 毫秒级本地过滤 (立刻让符合特征的本地卡片留下来)
-            const localFiltered = globalNodes.filter(node => 
-                node.title.toLowerCase().includes(query.toLowerCase()) || 
-                (node.description && node.description.toLowerCase().includes(query.toLowerCase()))
-            );
-            renderNodes(localFiltered);
-
-            // 2. 延迟 800ms 唤醒大模型语义检索 (避免浪费 AI 算力)
-            aiTimeout = setTimeout(async () => {
-                gridTitle.innerHTML = '<i class="fa-solid fa-bolt solid-text-purple mr-2"></i>AI 脑机接口检索结果';
-                try {
-                    const response = await fetch('/api/search?q=' + encodeURIComponent(query));
-                    const aiNodes = await response.json();
-                    renderNodes(aiNodes);
-                } catch(e) {}
-            }, 800);
+        // 提交修改
+        document.getElementById('edit-node-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const payload = {
+                id: document.getElementById('edit-id').value,
+                title: document.getElementById('edit-title').value,
+                url: document.getElementById('edit-url').value,
+                description: document.getElementById('edit-desc').value,
+                icon: document.getElementById('edit-icon').value,
+                category: document.getElementById('edit-category').value,
+                color_theme: document.getElementById('edit-theme').value
+            };
+            const btn = e.target.querySelector('button[type="submit"]');
+            btn.innerHTML = 'UPDATING...';
+            await fetch('/api/nodes', { method: 'PUT', body: JSON.stringify(payload) });
+            btn.innerHTML = 'UPDATE_NODE';
+            document.getElementById('edit-node-modal').close();
+            fetchSystemData();
         });
 
-        /* =======================================================================
-         * 5. 权限与管理面板系统 (融合控制台)
-         * ======================================================================= */
-        const authBtn = document.getElementById('auth-btn');
-        const adminPanel = document.getElementById('admin-panel');
-
-        function updateAdminUI() {
-            if (isAdmin) {
-                authBtn.innerHTML = '<i class="fa-solid fa-unlock mr-2"></i>SYS_OP LOGOUT';
-                authBtn.classList.add('border-[#ef4444]', 'solid-text-crimson');
-                adminPanel.classList.remove('hidden');
-            } else {
-                authBtn.innerHTML = '<i class="fa-solid fa-lock mr-2"></i>SYS_OP LOGIN';
-                authBtn.classList.remove('border-[#ef4444]', 'solid-text-crimson');
-                adminPanel.classList.add('hidden');
-            }
-            renderNodes(globalNodes); // 重新渲染以显示/隐藏垃圾桶图标
-        }
-
-        authBtn.addEventListener('click', () => {
-            if (isAdmin) {
-                sessionStorage.removeItem('sys_op_token');
-                isAdmin = false;
-            } else {
-                // 极简密码锁，建议改为复杂密码。这里主要防君子，真防盗还需 CF Access
-                if (prompt('> AUTHENTICATION REQUIRED:') === 'root') { 
-                    sessionStorage.setItem('sys_op_token', 'AUTHORIZED');
-                    isAdmin = true;
-                } else {
-                    alert('> ACCESS DENIED');
-                }
-            }
-            updateAdminUI();
-        });
-
-        // 智能靶向抓取 API 对接
-        document.getElementById('btn-parse').addEventListener('click', async () => {
-            const urlInput = document.getElementById('node-url').value;
-            if (!urlInput) { adminStatus.innerText = "> [警告] 请先输入目标网址！"; adminStatus.className = "text-xs solid-text-crimson"; return; }
-
-            adminStatus.innerText = "> 正在召唤边缘节点，执行深度渗透解析...";
-            adminStatus.className = "text-xs solid-text-purple";
-            
-            try {
-                const response = await fetch('/api/parse', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url: urlInput }) });
-                if (response.ok) {
-                    const data = await response.json();
-                    if (data.title) document.getElementById('node-title').value = data.title;
-                    if (data.description) document.getElementById('node-desc').value = data.description;
-                    if (data.icon) document.getElementById('node-icon').value = data.icon;
-                    adminStatus.innerText = "> [渗透成功] 特征已提取，请确认注入。";
-                    adminStatus.className = "text-xs solid-text-emerald";
-                }
-            } catch (error) {
-                adminStatus.innerText = "> [系统异常] 解析链路中断。";
-                adminStatus.className = "text-xs solid-text-crimson";
-            }
-        });
-
-        // 提交节点入库 API 对接
+        // 提交新建
         document.getElementById('add-node-form').addEventListener('submit', async (e) => {
             e.preventDefault();
-            adminStatus.innerText = "> 正在连接 D1 核心，写入数据...";
-            
+            const btn = e.target.querySelector('button[type="submit"]');
+            btn.innerHTML = 'INJECTING...';
             const payload = {
                 title: document.getElementById('node-title').value,
                 url: document.getElementById('node-url').value,
                 description: document.getElementById('node-desc').value,
                 icon: document.getElementById('node-icon').value,
-                category: '核心服务', // 极简面板默认分类
-                color_theme: 'cyan'
+                category: document.getElementById('node-category').value,
+                color_theme: document.getElementById('node-theme').value
             };
-            
+            await fetch('/api/nodes', { method: 'POST', body: JSON.stringify(payload) });
+            btn.innerHTML = '[ 确认注入节点 ]';
+            document.getElementById('add-node-form').reset();
+            fetchSystemData();
+        });
+
+        // 靶向解析 (不变)
+        document.getElementById('btn-parse').addEventListener('click', async () => {
+            const urlInput = document.getElementById('node-url').value;
+            if(!urlInput) return alert('> 输入目标 URL 以唤醒 AI。');
+            const btn = document.getElementById('btn-parse');
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 解析中...';
             try {
-                const response = await fetch('/api/add', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                if (response.ok) {
-                    adminStatus.innerText = "> [成功] 数据已注入全网阵列。";
-                    adminStatus.className = "text-xs solid-text-emerald";
-                    document.getElementById('add-node-form').reset();
-                    loadAllLinks(); // 刷新列表
+                const res = await fetch('/api/parse', { method: 'POST', body: JSON.stringify({ url: urlInput }) });
+                if(res.ok) {
+                    const data = await res.json();
+                    if (data.title) document.getElementById('node-title').value = data.title;
+                    if (data.description) document.getElementById('node-desc').value = data.description;
+                    if (data.icon) document.getElementById('node-icon').value = data.icon;
                 }
-            } catch (error) {
-                adminStatus.innerText = "> [错误] 数据写入被拒绝。";
-                adminStatus.className = "text-xs solid-text-crimson";
+            } finally { btn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> AI 解析'; }
+        });
+
+        // ==========================================
+        // 鉴权系统与界面交互
+        // ==========================================
+        function updateAdminUI() {
+            const authBtn = document.getElementById('auth-btn');
+            const adminPanel = document.getElementById('admin-panel');
+            if (isAdmin) {
+                authBtn.innerHTML = '<i class="fa-solid fa-unlock mr-2"></i>SYS_OP LOGOUT';
+                authBtn.className = "px-4 py-2 text-sm glass-panel solid-text-crimson border-l-2 border-[#ef4444]";
+                adminPanel.classList.remove('hidden');
+            } else {
+                authBtn.innerHTML = '<i class="fa-solid fa-lock mr-2"></i>SYS_OP LOGIN';
+                authBtn.className = "px-4 py-2 text-sm glass-panel solid-text-gray hover:solid-text-cyan border-l-2 border-transparent hover:border-[#22d3ee] transition-all";
+                adminPanel.classList.add('hidden');
             }
-        });
-
-        /* =======================================================================
-         * 6. 多引擎跃迁 & HUD 时钟逻辑
-         * ======================================================================= */
-        document.getElementById('web-search-form').addEventListener('submit', (e) => {
-            e.preventDefault();
-            const engineUrl = document.getElementById('engine-select').value;
-            const query = document.getElementById('web-search-input').value;
-            window.open(engineUrl + encodeURIComponent(query), '_blank');
-        });
-
-        const genesisTime = new Date('2024-01-01T00:00:00Z').getTime();
-        const uptimeEl = document.getElementById('hud-uptime');
-
-        function updateUptime() {
-            const diff = new Date().getTime() - genesisTime;
-            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-            const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-            const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-            const secs = Math.floor((diff % (1000 * 60)) / 1000);
-            uptimeEl.textContent = `系统存活 ${days}天 ${hours}小时 ${mins}分 ${secs}秒`;
+            fetchSystemData(); // 重新渲染卡片上的齿轮图标
         }
 
-        // 初始化全站
-        setInterval(updateUptime, 1000);
-        updateUptime();
-        updateAdminUI();
-        loadAllLinks();
+        document.getElementById('auth-btn').addEventListener('click', () => {
+            if (isAdmin) { sessionStorage.removeItem('sys_op_token'); isAdmin = false; } 
+            else { if (prompt('> AUTHENTICATION REQUIRED:') === 'root') { sessionStorage.setItem('sys_op_token', 'AUTHORIZED'); isAdmin = true; } }
+            updateAdminUI();
+        });
 
+        // 搜索过滤与时钟模块
+        let aiTimeout = null;
+        document.getElementById('ai-filter-input').addEventListener('input', (e) => {
+            clearTimeout(aiTimeout);
+            const query = e.target.value.trim();
+            if (!query) { renderCategorizedNodes(globalNodes); return; }
+            
+            const localFiltered = globalNodes.filter(n => n.title.toLowerCase().includes(query.toLowerCase()) || (n.description && n.description.toLowerCase().includes(query.toLowerCase())));
+            renderCategorizedNodes(localFiltered);
+
+            aiTimeout = setTimeout(async () => {
+                try {
+                    const res = await fetch('/api/search?q=' + encodeURIComponent(query));
+                    renderCategorizedNodes(await res.json());
+                } catch(e) {}
+            }, 800);
+        });
+
+        document.getElementById('web-search-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            window.open(document.getElementById('engine-select').value + encodeURIComponent(document.getElementById('web-search-input').value), '_blank');
+        });
+
+        const gTime = new Date('2024-01-01T00:00:00Z').getTime();
+        setInterval(() => {
+            const d = new Date().getTime() - gTime;
+            document.getElementById('hud-uptime').textContent = `系统存活 ${Math.floor(d/86400000)}天 ${Math.floor((d%86400000)/3600000)}小时 ${Math.floor((d%3600000)/60000)}分 ${Math.floor((d%60000)/1000)}秒`;
+        }, 1000);
+
+        updateAdminUI();
     </script>
 </body>
 </html>
