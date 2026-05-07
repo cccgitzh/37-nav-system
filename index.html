@@ -16,20 +16,19 @@
             theme: {
                 extend: {
                     colors: {
-                        /* 注入正统 Dracula 官方色卡 */
+                        /* 纯正 Dracula 官方色卡 */
                         dracula: {
-                            dark: '#0E0D11',    // 极深背景
-                            bg: '#282a36',      // 控件背景
-                            current: '#44475a', // 边框与高亮
-                            fg: '#f8f8f2',      // 前景文字
-                            comment: '#6272a4', // 注释/失焦文字
-                            cyan: '#8be9fd',
-                            green: '#50fa7b',
-                            orange: '#ffb86c',
-                            pink: '#ff79c6',
-                            purple: '#bd93f9',
-                            red: '#ff5555',
-                            yellow: '#f1fa8c'
+                            dark: '#1E1F29',    // 极深底色
+                            bg: '#282A36',      // 基础背景
+                            current: '#44475A', // 行高亮/边框
+                            fg: '#F8F8F2',      // 前景文本
+                            comment: '#6272A4', // 注释文本
+                            cyan: '#8BE9FD',
+                            green: '#50FA7B',
+                            pink: '#FF79C6',
+                            purple: '#BD93F9',
+                            red: '#FF5555',
+                            yellow: '#F1FA8C'
                         }
                     },
                     fontFamily: { mono: ['"JetBrains Mono"', 'monospace'] }
@@ -40,9 +39,8 @@
 
     <style>
         html { scroll-behavior: smooth; }
-
         body {
-            background-color: #0E0D11;
+            background-color: #282A36;
             background-image: 
                 linear-gradient(rgba(139, 233, 253, 0.02) 1px, transparent 1px),
                 linear-gradient(90deg, rgba(139, 233, 253, 0.02) 1px, transparent 1px);
@@ -50,98 +48,84 @@
             background-attachment: fixed;
             font-family: 'JetBrains Mono', monospace;
             -webkit-font-smoothing: antialiased;
-            color: #f8f8f2;
+            color: #F8F8F2;
             margin-bottom: 50px;
         }
 
-        .glass-panel {
-            background: rgba(40, 42, 54, 0.6);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid #44475a;
-        }
-
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: #0E0D11; }
-        ::-webkit-scrollbar-thumb { background: #bd93f9; border-radius: 3px; }
-        
+        /* 隐藏横向滚动条，但保持可滑动 */
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-        /* 赛博模态框系统 (适配 Dracula 配色) */
-        .cyber-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; z-index: 9999; opacity: 0; pointer-events: none; transition: opacity 0.2s ease; }
+        /* 纵向滚动条美化 */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #1E1F29; }
+        ::-webkit-scrollbar-thumb { background: #6272A4; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #BD93F9; }
+
+        /* 赛博全息模态框 (Dracula版) */
+        .cyber-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8); backdrop-filter: blur(5px); display: flex; align-items: center; justify-content: center; z-index: 9999; opacity: 0; pointer-events: none; transition: opacity 0.2s ease; }
         .cyber-overlay.active { opacity: 1; pointer-events: all; }
-        .cyber-modal { background: #282a36; border: 1px solid #bd93f9; box-shadow: 0 0 40px rgba(189, 147, 249, 0.15); border-radius: 12px; padding: 25px; width: 90%; max-width: 400px; transform: scale(0.95) translateY(10px); transition: transform 0.2s ease; }
-        .cyber-overlay.active .cyber-modal { transform: scale(1) translateY(0); }
-        .cyber-modal-title { font-weight: bold; font-size: 1.1rem; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; color: #8be9fd; }
-        .cyber-modal-msg { color: #f8f8f2; font-size: 0.9rem; line-height: 1.5; margin-bottom: 20px;}
-        .cyber-modal-actions { display: flex; justify-content: flex-end; gap: 12px; }
-        .btn-modal { padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: bold; border: 1px solid; transition: all 0.2s; background: transparent; font-family: inherit;}
-        .btn-modal.cancel { border-color: #6272a4; color: #6272a4; }
-        .btn-modal.cancel:hover { background: #44475a; color: #f8f8f2; }
-        .btn-modal.confirm { border-color: #bd93f9; color: #bd93f9; background: rgba(189, 147, 249, 0.1); }
-        .btn-modal.confirm:hover { background: #bd93f9; color: #282a36; }
-        .cyber-input { width: 100%; padding: 12px; background: #0E0D11; border: 1px solid #44475a; color: #f8f8f2; border-radius: 8px; box-sizing: border-box; font-family: inherit; margin-bottom: 20px; outline: none; transition: border-color 0.2s;}
-        .cyber-input:focus { border-color: #bd93f9; box-shadow: 0 0 10px rgba(189, 147, 249, 0.2); }
+        .cyber-modal { background: #282A36; border: 1px solid #BD93F9; box-shadow: 0 0 30px rgba(189, 147, 249, 0.2); border-radius: 12px; padding: 25px; width: 90%; max-width: 400px; transform: scale(0.95); transition: transform 0.2s ease; }
+        .cyber-overlay.active .cyber-modal { transform: scale(1); }
+        .btn-modal { padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: bold; border: 1px solid; transition: all 0.2s; background: transparent; }
+        .btn-modal.cancel { border-color: #6272A4; color: #6272A4; }
+        .btn-modal.cancel:hover { background: #44475A; color: #F8F8F2; }
+        .btn-modal.confirm { border-color: #BD93F9; color: #BD93F9; background: rgba(189, 147, 249, 0.1); }
+        .btn-modal.confirm:hover { background: #BD93F9; color: #282A36; }
+        .cyber-input { width: 100%; padding: 12px; background: #1E1F29; border: 1px solid #44475A; color: #F8F8F2; border-radius: 6px; box-sizing: border-box; margin-bottom: 20px; outline: none; transition: border-color 0.2s;}
+        .cyber-input:focus { border-color: #8BE9FD; box-shadow: 0 0 10px rgba(139, 233, 253, 0.1); }
     </style>
 </head>
 <body class="min-h-screen flex flex-col items-center pb-16 relative">
 
-    <header class="fixed top-0 w-full z-50 bg-dracula-dark border-b border-[#ffffff1a] shadow-lg flex flex-col">
-        
-        <div class="max-w-7xl w-full mx-auto px-4 md:px-6 py-3 flex flex-wrap items-center justify-between gap-4">
+    <header class="fixed top-0 w-full z-50 bg-dracula-bg/95 backdrop-blur-md border-b border-dracula-current h-16 shadow-lg shadow-black/20">
+        <div class="max-w-[1400px] h-full mx-auto px-4 flex items-center justify-between gap-4">
             
-            <div class="flex items-center justify-between w-full md:w-auto">
-                <a href="#" onclick="window.scrollTo(0,0)" class="flex items-center gap-2 group flex-shrink-0">
-                    <img src="./logo.png" alt="Logo" class="w-8 h-8 rounded border border-dracula-purple/50 object-cover shadow-[0_0_10px_rgba(189,147,249,0.2)]" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
-                    <i class="fa-solid fa-cube text-dracula-purple text-2xl hidden"></i>
-                    <span class="text-xl font-bold text-dracula-fg tracking-tight group-hover:text-dracula-pink transition-colors">
-                        37°<span class="text-dracula-purple ml-1">NAV</span>
-                    </span>
+            <div class="flex items-center gap-2 md:gap-6 h-full flex-1 min-w-0">
+                <a href="#" onclick="window.scrollTo(0,0)" class="flex items-center gap-2 flex-shrink-0 group">
+                    <div class="w-8 h-8 rounded border border-dracula-purple/50 flex items-center justify-center bg-dracula-current overflow-hidden">
+                        <img src="./logo.png" alt="Logo" class="w-full h-full object-cover" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                        <i class="fa-solid fa-cube text-dracula-cyan hidden text-sm"></i>
+                    </div>
+                    <span class="text-lg font-bold text-dracula-fg tracking-tight hidden sm:block group-hover:text-dracula-pink transition-colors">37°<span class="text-dracula-purple">NAV</span></span>
                 </a>
-                <button id="auth-btn-mobile" class="md:hidden text-sm bg-dracula-purple hover:bg-dracula-pink text-dracula-dark font-bold px-3 py-1.5 rounded-lg transition-colors shadow-lg">
-                    <i class="fa-solid fa-lock"></i>
-                </button>
-            </div>
-            
-            <div class="flex-1 w-full md:w-auto flex flex-col md:flex-row items-center gap-3 order-3 md:order-2">
-                <form id="web-search-form" class="flex-1 w-full flex items-center bg-dracula-bg hover:bg-[#343746] border border-dracula-current rounded-lg px-3 py-2 md:py-1.5 transition-colors focus-within:border-dracula-purple focus-within:bg-dracula-bg shadow-inner">
-                    <select id="engine-select" class="bg-transparent text-dracula-fg text-sm outline-none cursor-pointer pr-2 border-r border-dracula-current">
-                        <option value="https://www.google.com/search?q=">Google</option>
-                        <option value="https://www.bing.com/search?q=">Bing</option>
-                        <option value="https://github.com/search?q=">GitHub</option>
-                    </select>
-                    <input type="text" id="web-search-input" placeholder="Search the web..." required class="flex-1 bg-transparent text-dracula-fg text-sm outline-none px-3 placeholder-dracula-comment w-full">
-                    <button type="submit" class="text-dracula-comment hover:text-dracula-fg transition-colors"><i class="fa-solid fa-arrow-right-to-bracket"></i></button>
-                </form>
                 
-                <div class="flex-1 w-full flex items-center bg-dracula-bg hover:bg-[#343746] border border-dracula-current rounded-lg px-3 py-2 md:py-1.5 transition-colors focus-within:border-dracula-pink focus-within:bg-dracula-bg relative shadow-inner">
-                    <i class="fa-solid fa-robot text-dracula-comment text-sm"></i>
-                    <input type="text" id="ai-filter-input" placeholder="AI Filter & Search..." class="flex-1 bg-transparent text-dracula-fg text-sm outline-none px-3 placeholder-dracula-comment w-full">
-                    <kbd class="hidden xl:inline-block bg-dracula-current text-dracula-fg text-[10px] px-1.5 py-0.5 rounded ml-2 font-mono border border-[#55586b] shadow-sm">⌘K</kbd>
+                <div id="nav-categories" class="flex items-center gap-1 h-full overflow-x-auto no-scrollbar flex-1 mask-edges text-sm font-medium">
+                    <span class="text-dracula-comment text-xs">Syncing...</span>
                 </div>
             </div>
 
-            <div class="hidden md:flex items-center gap-4 flex-shrink-0 order-2 md:order-3">
-                <a href="/admin.html" id="admin-link" target="_blank" class="hidden text-sm text-dracula-comment hover:text-dracula-fg font-semibold transition-colors">
+            <div class="flex items-center gap-3 flex-shrink-0">
+                
+                <div class="hidden lg:flex items-center bg-dracula-dark/80 border border-dracula-current rounded-lg p-1 transition-colors focus-within:border-dracula-purple focus-within:bg-dracula-dark shadow-inner">
+                    <form id="web-search-form" class="flex items-center pl-2 pr-1 border-r border-dracula-comment/40">
+                        <select id="engine-select" class="bg-transparent text-dracula-comment hover:text-dracula-cyan text-xs outline-none cursor-pointer">
+                            <option value="https://www.google.com/search?q=">G</option>
+                            <option value="https://www.bing.com/search?q=">B</option>
+                            <option value="https://github.com/search?q=">Hub</option>
+                        </select>
+                        <input type="text" id="web-search-input" placeholder="Search..." required class="bg-transparent text-dracula-fg text-sm outline-none px-2 w-20 focus:w-32 transition-all placeholder-dracula-comment">
+                        <button type="submit" class="text-dracula-comment hover:text-dracula-pink"><i class="fa-solid fa-arrow-right-to-bracket"></i></button>
+                    </form>
+                    
+                    <div class="flex items-center pl-2 pr-1 relative">
+                        <i class="fa-solid fa-robot text-dracula-comment text-sm"></i>
+                        <input type="text" id="ai-filter-input" placeholder="AI Filter..." class="bg-transparent text-dracula-fg text-sm outline-none px-2 w-24 focus:w-36 transition-all placeholder-dracula-comment">
+                        <kbd class="text-[10px] text-dracula-fg bg-dracula-current rounded px-1 border border-[#55586B]">⌘K</kbd>
+                    </div>
+                </div>
+                
+                <a href="/admin.html" id="admin-link" target="_blank" class="hidden text-sm text-dracula-comment hover:text-dracula-cyan font-bold transition-colors border border-transparent hover:border-dracula-cyan/30 px-2 py-1 rounded">
                     <i class="fa-solid fa-server mr-1"></i>Console
                 </a>
-                <button id="auth-btn-pc" class="text-sm bg-dracula-purple hover:bg-dracula-pink text-dracula-dark font-bold px-4 py-1.5 rounded-lg transition-colors flex items-center gap-2 shadow-lg shadow-dracula-purple/20">
-                    <i class="fa-solid fa-lock"></i><span>SYS_OP</span>
+                <button id="auth-btn" class="text-sm bg-dracula-purple hover:bg-dracula-pink text-dracula-dark font-bold px-3 py-1.5 rounded-lg transition-colors shadow-lg flex items-center gap-1.5">
+                    <i class="fa-solid fa-lock"></i><span class="hidden sm:inline">SYS_OP</span>
                 </button>
-            </div>
-        </div>
-
-        <div class="w-full border-t border-dracula-current/50 bg-dracula-dark/95">
-            <div class="max-w-7xl mx-auto px-4 md:px-6">
-                <div id="nav-categories" class="flex items-center gap-2 overflow-x-auto py-2.5 no-scrollbar text-sm font-medium text-dracula-comment">
-                    <span class="text-xs">Syncing telemetry data...</span>
-                </div>
             </div>
         </div>
     </header>
 
-    <main class="w-full max-w-7xl flex flex-col gap-10 pt-48 md:pt-36 px-6">
+    <main class="w-full max-w-7xl flex flex-col gap-12 pt-28 px-6">
         <div id="dynamic-zones" class="flex flex-col gap-12"></div>
     </main>
 
@@ -157,7 +141,7 @@
 
     <script>
         /* =========================================================
-           UI 引擎与数据逻辑 (完美适配)
+           赛博模态框 UI 引擎
            ========================================================= */
         const SysUI = {
             createContainer(id) {
@@ -177,8 +161,8 @@
                     const overlay = this.createContainer('cyber-prompt');
                     overlay.innerHTML = `
                         <div class="cyber-modal">
-                            <div class="cyber-modal-title"><i class="fa-solid fa-terminal"></i> ${title}</div>
-                            <div class="cyber-modal-msg">${msg}</div>
+                            <div class="cyber-modal-title" style="color:var(--dracula-cyan);"><i class="fa-solid fa-terminal"></i> ${title}</div>
+                            <div class="cyber-modal-msg" style="color:var(--dracula-fg); margin-bottom:15px;">${msg}</div>
                             <input type="${type}" id="prompt-input" class="cyber-input" autocomplete="off">
                             <div class="cyber-modal-actions">
                                 <button class="btn-modal cancel" id="p-cancel">Cancel</button>
@@ -197,13 +181,13 @@
             showConfirm(title, msg, isDanger = false) {
                 return new Promise(resolve => {
                     const overlay = this.createContainer('cyber-confirm');
-                    const themeColor = isDanger ? '#ff5555' : '#50fa7b';
+                    const themeColor = isDanger ? '#FF5555' : '#50FA7B';
                     const btnClass = isDanger ? 'danger' : 'confirm';
                     const icon = isDanger ? 'fa-triangle-exclamation' : 'fa-circle-check';
                     overlay.innerHTML = `
                         <div class="cyber-modal" style="border-color:${themeColor}">
                             <div class="cyber-modal-title" style="color:${themeColor};"><i class="fa-solid ${icon}"></i> ${title}</div>
-                            <div class="cyber-modal-msg">${msg}</div>
+                            <div class="cyber-modal-msg" style="color:var(--dracula-fg); margin-bottom:20px;">${msg}</div>
                             <div class="cyber-modal-actions">
                                 <button class="btn-modal cancel" id="c-cancel">Cancel</button>
                                 <button class="btn-modal ${btnClass}" id="c-ok">Confirm</button>
@@ -217,6 +201,9 @@
             }
         };
 
+        /* =========================================================
+           系统核心逻辑
+           ========================================================= */
         let globalCategories = [];
         let globalNodes = [];
         let isAdmin = sessionStorage.getItem('sys_op_token') === 'AUTHORIZED';
@@ -228,6 +215,7 @@
                 const [catRes, nodeRes] = await Promise.all([ fetch('/api/categories'), fetch('/api/nodes') ]);
                 globalCategories = await catRes.json();
                 globalNodes = await nodeRes.json();
+                
                 renderNavbarCategories();
                 renderCategorizedNodes(globalNodes);
             } catch (e) {
@@ -235,36 +223,43 @@
             }
         }
 
-        // 渲染顶部镶嵌的分类导航条 (Dracula 链接样式)
+        // 渲染顶部单行分类导航
         function renderNavbarCategories() {
             if(globalCategories.length === 0) {
-                navCatContainer.innerHTML = '<span>No categories found.</span>';
+                navCatContainer.innerHTML = '<span class="text-dracula-comment text-xs">No categories found.</span>';
                 return;
             }
             navCatContainer.innerHTML = globalCategories.map(c => `
-                <a href="#cat-${c.name}" class="px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap hover:bg-dracula-current/50 hover:text-dracula-fg">
+                <a href="#cat-${c.name.replace(/\s+/g, '-')}" class="text-dracula-comment hover:text-dracula-fg hover:bg-dracula-current/50 px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors border border-transparent hover:border-dracula-current">
                     ${c.name}
                 </a>
             `).join('');
         }
 
+        // 渲染阵列卡片
         function renderCategorizedNodes(nodes, isAiSearch = false) {
             dynamicZones.innerHTML = '';
             
             if (isAiSearch) {
-                if (nodes.length === 0) return dynamicZones.innerHTML = '<p class="text-dracula-comment">> 神经元未匹配到相关结果。</p>';
+                if (nodes.length === 0) {
+                    dynamicZones.innerHTML = '<p class="text-dracula-comment">> 神经元未匹配到相关结果。</p>';
+                    return;
+                }
                 const zone = document.createElement('div');
                 zone.innerHTML = `
                     <div class="flex items-center gap-3 mb-6">
                         <h2 class="text-2xl font-bold text-dracula-pink">AI 检索结果</h2>
-                        <div class="h-px bg-dracula-pink/30 flex-grow"></div>
+                        <div class="h-px bg-dracula-pink/20 flex-grow"></div>
                     </div>`;
                 zone.appendChild(buildGrid(nodes, 'pink'));
                 dynamicZones.appendChild(zone);
                 return;
             }
 
-            if (nodes.length === 0) return dynamicZones.innerHTML = '<p class="text-dracula-comment">> 扫描未命中任何战术节点。</p>';
+            if (nodes.length === 0) {
+                dynamicZones.innerHTML = '<p class="text-dracula-comment">> 扫描未命中任何战术节点。</p>';
+                return;
+            }
 
             const grouped = {};
             globalCategories.forEach(c => grouped[c.name] = []);
@@ -275,15 +270,18 @@
 
             for (const [catName, catNodes] of Object.entries(grouped)) {
                 if (catNodes.length === 0) continue;
+
                 const zone = document.createElement('div');
-                // 丝滑滚动锚点支持：预留顶部导航栏高度
-                zone.id = `cat-${catName}`;
-                zone.className = "scroll-mt-48 md:scroll-mt-36"; 
+                // 预留顶部单行导航栏的高度 (h-16 = 4rem = 64px)
+                zone.id = `cat-${catName.replace(/\s+/g, '-')}`;
+                zone.className = "scroll-mt-24"; 
+                
                 zone.innerHTML = `
                     <div class="flex items-center gap-3 mb-6">
-                        <h2 class="text-2xl font-bold text-dracula-cyan">${catName}</h2>
-                        <div class="h-px bg-dracula-cyan/20 flex-grow"></div>
+                        <h2 class="text-xl font-bold text-dracula-cyan">${catName}</h2>
+                        <div class="h-px bg-dracula-current flex-grow"></div>
                     </div>`;
+                
                 zone.appendChild(buildGrid(catNodes, 'cyan'));
                 dynamicZones.appendChild(zone);
             }
@@ -291,34 +289,38 @@
 
         function buildGrid(nodesArray, theme = 'cyan') {
             const grid = document.createElement('div');
-            grid.className = 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6';
-            
-            // Dracula Theme 配色映射
-            const tColor = theme === 'pink' ? 'text-dracula-pink' : 'text-dracula-cyan';
-            const bColor = theme === 'pink' ? 'hover:border-dracula-pink/50' : 'hover:border-dracula-cyan/50';
-            const bgLight = theme === 'pink' ? 'bg-dracula-pink/10' : 'bg-dracula-cyan/10';
+            grid.className = 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6';
 
             nodesArray.forEach(link => {
                 const card = document.createElement('a');
                 card.href = link.url; card.target = '_blank';
-                card.className = `relative glass-panel rounded-xl p-5 flex items-center gap-4 hover:bg-white/5 ${bColor} transition-all duration-300 group w-full min-w-0 overflow-hidden block`;
+                // 纯正 Dracula 极简深色毛玻璃卡片
+                card.className = `relative bg-dracula-current/30 hover:bg-dracula-current/60 backdrop-blur-md rounded-xl p-4 flex items-center gap-4 border border-[#ffffff08] hover:border-dracula-${theme}/50 transition-all duration-300 group w-full min-w-0 overflow-hidden block shadow-sm hover:shadow-[0_5px_15px_rgba(0,0,0,0.3)]`;
                 
-                const iconPreview = link.icon && link.icon.startsWith('http')
-                    ? `<img src="${link.icon}" loading="lazy" alt="icon" class="w-10 h-10 rounded-md object-contain filter drop-shadow-md group-hover:scale-110 transition-transform duration-300" onerror="this.onerror=null; this.outerHTML='<i class=\\'fa-solid fa-link text-xl group-hover:scale-110 transition-transform duration-300\\'></i>'">`
-                    : `<i class="${link.icon || 'fa-solid fa-link'} text-xl group-hover:scale-110 transition-transform duration-300"></i>`;
+                // 【核心修复：彻底解决图裂】通过嵌套隐藏节点来避免内联 JS 字符串报错
+                let iconHTML = '';
+                if (link.icon && link.icon.startsWith('http')) {
+                    iconHTML = `
+                        <div class="relative w-10 h-10 flex items-center justify-center">
+                            <img src="${link.icon}" loading="lazy" alt="icon" class="w-full h-full rounded object-contain filter drop-shadow-md group-hover:scale-110 transition-transform duration-300" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                            <i class="fa-solid fa-link text-dracula-purple text-xl hidden group-hover:scale-110 transition-transform duration-300"></i>
+                        </div>`;
+                } else {
+                    iconHTML = `<div class="w-10 h-10 flex items-center justify-center"><i class="${link.icon || 'fa-solid fa-link'} text-xl text-dracula-purple group-hover:scale-110 transition-transform duration-300"></i></div>`;
+                }
 
                 const adminHtml = isAdmin ? `
                     <div class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                        <button onclick="deleteNode(event, ${link.id}, '${link.title.replace(/'/g, "\\'")}')" class="text-xs text-dracula-red hover:text-white bg-dracula-dark border border-dracula-current px-2 py-1 rounded shadow"><i class="fa-solid fa-trash"></i></button>
+                        <button onclick="deleteNode(event, ${link.id}, '${link.title.replace(/'/g, "\\'")}')" class="text-xs text-dracula-red hover:text-white bg-dracula-dark border border-dracula-red/30 hover:bg-dracula-red px-2 py-1 rounded shadow transition-colors"><i class="fa-solid fa-trash"></i></button>
                     </div>` : '';
 
                 card.innerHTML = `
                     ${adminHtml}
-                    <div class="flex-shrink-0 w-12 h-12 ${bgLight} rounded-lg flex items-center justify-center ${tColor} shadow-inner">
-                        ${iconPreview}
+                    <div class="flex-shrink-0 w-12 h-12 bg-dracula-bg rounded-lg flex items-center justify-center border border-dracula-current shadow-inner">
+                        ${iconHTML}
                     </div>
                     <div class="flex-1 min-w-0">
-                        <h3 class="text-base font-medium text-dracula-fg truncate group-hover:${tColor} transition-colors">${link.title}</h3>
+                        <h3 class="text-base font-bold text-dracula-fg truncate group-hover:text-dracula-${theme} transition-colors">${link.title}</h3>
                         <p class="text-xs text-dracula-comment truncate mt-1">${link.description || '暂无特征数据'}</p>
                     </div>
                 `;
@@ -328,43 +330,38 @@
         }
 
         // =====================================
-        // 系统鉴权与业务交互
+        // 系统鉴权与业务
         // =====================================
         function updateAdminUI() {
-            const btns = [document.getElementById('auth-btn-pc'), document.getElementById('auth-btn-mobile')];
+            const authBtn = document.getElementById('auth-btn');
             const adminLink = document.getElementById('admin-link');
-            btns.forEach(btn => {
-                if(!btn) return;
-                if (isAdmin) {
-                    btn.innerHTML = btn.id.includes('pc') ? '<i class="fa-solid fa-unlock mr-2"></i>LOGOUT' : '<i class="fa-solid fa-unlock"></i>';
-                    btn.className = "text-sm bg-dracula-red hover:bg-[#ff7373] text-dracula-dark font-bold px-4 py-1.5 rounded-lg transition-colors shadow-lg";
-                } else {
-                    btn.innerHTML = btn.id.includes('pc') ? '<i class="fa-solid fa-lock mr-2"></i>SYS_OP' : '<i class="fa-solid fa-lock"></i>';
-                    btn.className = "text-sm bg-dracula-purple hover:bg-dracula-pink text-dracula-dark font-bold px-4 py-1.5 rounded-lg transition-colors shadow-lg";
-                }
-            });
-            if(isAdmin) adminLink.classList.remove('hidden');
-            else adminLink.classList.add('hidden');
+            
+            if (isAdmin) {
+                authBtn.innerHTML = '<i class="fa-solid fa-unlock"></i><span class="hidden md:inline ml-1.5">LOGOUT</span>';
+                authBtn.className = "text-sm bg-dracula-red hover:bg-[#ff7373] text-dracula-dark font-bold px-3 py-1.5 rounded-lg transition-colors flex items-center shadow-lg shadow-dracula-red/20";
+                adminLink.classList.remove('hidden'); 
+            } else {
+                authBtn.innerHTML = '<i class="fa-solid fa-lock"></i><span class="hidden md:inline ml-1.5">SYS_OP</span>';
+                authBtn.className = "text-sm bg-dracula-purple hover:bg-dracula-pink text-dracula-dark font-bold px-3 py-1.5 rounded-lg transition-colors flex items-center shadow-lg shadow-dracula-purple/20";
+                adminLink.classList.add('hidden');
+            }
             renderCategorizedNodes(globalNodes);
         }
 
-        async function handleAuth() {
+        document.getElementById('auth-btn').addEventListener('click', async () => {
             if (isAdmin) { 
                 sessionStorage.removeItem('sys_op_token'); isAdmin = false; 
             } else { 
-                const pwd = await SysUI.showPrompt('System Auth', '请输入超级管理员密钥:', 'password');
+                const pwd = await SysUI.showPrompt('SYS_AUTH', 'Enter Override Key:', 'password');
                 if (pwd === 'root') { sessionStorage.setItem('sys_op_token', 'AUTHORIZED'); isAdmin = true; } 
-                else if (pwd !== null) { await SysUI.showConfirm('Access Denied', '密钥无效，连接已被拒绝。', true); }
+                else if (pwd !== null) { await SysUI.showConfirm('Access Denied', 'Authentication failed.', true); }
             }
             updateAdminUI();
-        }
-
-        document.getElementById('auth-btn-pc').addEventListener('click', handleAuth);
-        document.getElementById('auth-btn-mobile').addEventListener('click', handleAuth);
+        });
 
         window.deleteNode = async function(e, id, title) {
             e.preventDefault(); 
-            const confirm = await SysUI.showConfirm('抹除节点', `确定要永久销毁 [ ${title} ] 吗？`, true);
+            const confirm = await SysUI.showConfirm('Terminate Node', `Destroy node [ ${title} ] permanently?`, true);
             if (!confirm) return;
             try {
                 const response = await fetch('/api/nodes', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) });
@@ -372,9 +369,7 @@
             } catch (error) {}
         };
 
-        // =====================================
         // 搜索引擎接入
-        // =====================================
         let aiTimeout = null;
         document.getElementById('ai-filter-input').addEventListener('input', (e) => {
             clearTimeout(aiTimeout);
@@ -398,13 +393,14 @@
             window.open(document.getElementById('engine-select').value + encodeURIComponent(document.getElementById('web-search-input').value), '_blank');
         });
 
+        // 底部时钟引擎
         const gTime = new Date('2024-01-01T00:00:00Z').getTime();
         setInterval(() => {
             const d = new Date().getTime() - gTime;
-            document.getElementById('hud-uptime').textContent = `系统存活 ${Math.floor(d/86400000)}天 ${Math.floor((d%86400000)/3600000)}时`;
+            document.getElementById('hud-uptime').textContent = `UPTIME: ${Math.floor(d/86400000)}D ${Math.floor((d%86400000)/3600000)}H`;
         }, 60000); 
         const dInit = new Date().getTime() - gTime;
-        document.getElementById('hud-uptime').textContent = `系统存活 ${Math.floor(dInit/86400000)}天 ${Math.floor((dInit%86400000)/3600000)}时`;
+        document.getElementById('hud-uptime').textContent = `UPTIME: ${Math.floor(dInit/86400000)}D ${Math.floor((dInit%86400000)/3600000)}H`;
 
         updateAdminUI();
         fetchSystemData();
