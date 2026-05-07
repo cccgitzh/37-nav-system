@@ -44,7 +44,7 @@
         ::-webkit-scrollbar-thumb { background: #6272A4; border-radius: 3px; }
         ::-webkit-scrollbar-thumb:hover { background: #BD93F9; }
 
-        /* 去除阴影，扁平化卡片引擎 */
+        /* 扁平化动态卡片引擎 */
         .node-card { border: 1px solid rgba(255, 255, 255, 0.05); transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
         .node-card:hover { border-color: var(--card-color); transform: translateY(-2px); }
         .node-card:hover .node-title { color: var(--card-color); }
@@ -70,6 +70,9 @@
         .btn-modal.confirm:hover { background: #BD93F9; color: #282A36; }
         .cyber-input { width: 100%; padding: 12px; background: #1E1F29; border: 1px solid #44475A; color: #F8F8F2; border-radius: 6px; box-sizing: border-box; margin-bottom: 20px; outline: none; transition: border-color 0.2s;}
         .cyber-input:focus { border-color: #8BE9FD; }
+
+        /* 高清实心心跳，去除模糊滤镜 */
+        .sharp-heart { text-shadow: 0 0 3px rgba(255, 85, 85, 0.3); }
     </style>
 </head>
 <body class="min-h-screen flex flex-col items-center pb-16 relative">
@@ -137,7 +140,7 @@
 
     <footer class="fixed bottom-0 left-0 w-full h-10 bg-dracula-dark border-t border-dracula-current flex items-center justify-center px-6 z-40">
         <div class="flex items-center gap-2">
-            <i class="fa-solid fa-heart-pulse text-dracula-red animate-pulse text-base drop-shadow-[0_0_8px_rgba(255,85,85,0.8)]"></i>
+            <i class="fa-solid fa-heart-pulse text-dracula-red animate-pulse text-base sharp-heart"></i>
             <span id="hud-uptime" class="text-xs font-bold text-dracula-comment tracking-wider"></span>
         </div>
     </footer>
@@ -191,7 +194,14 @@
         const navCatContainer = document.getElementById('nav-categories');
         const draculaColors = ['#8BE9FD', '#50FA7B', '#FF79C6', '#BD93F9', '#FF5555', '#F1FA8C', '#FFB86C'];
 
-        // 【自定义下拉菜单引擎绑定】
+        // 字符串哈希算法 (用于稳定分配缺省颜色，拒绝乱闪)
+        function getHashColor(str) {
+            let hash = 0;
+            for (let i = 0; i < str.length; i++) { hash = str.charCodeAt(i) + ((hash << 5) - hash); }
+            return draculaColors[Math.abs(hash) % draculaColors.length];
+        }
+
+        // 自定义下拉菜单绑定
         let activeSearchUrl = "https://www.google.com/search?q=";
         document.querySelectorAll('.search-opt').forEach(opt => {
             opt.addEventListener('click', function() {
@@ -264,9 +274,9 @@
                 const card = document.createElement('a');
                 card.href = link.url; card.target = '_blank';
                 
-                const randomHex = draculaColors[Math.floor(Math.random() * draculaColors.length)];
-                card.style.setProperty('--card-color', randomHex);
-                // 已经移除卡片的底边阴影，纯正扁平边框发光
+                // 【稳定回退色】利用标题 Hash 分配固定颜色，拒绝每次刷新乱跳
+                const fallbackHex = getHashColor(link.title || link.url);
+                card.style.setProperty('--card-color', fallbackHex);
                 card.className = `node-card relative bg-dracula-current/30 hover:bg-dracula-current/60 backdrop-blur-md rounded-xl p-4 flex items-center gap-4 group w-full min-w-0 overflow-hidden block`;
                 
                 let iconHTML = '';
@@ -282,10 +292,10 @@
                     hiddenImg.onload = () => {
                         const canvas = document.createElement('canvas');
                         const ctx = canvas.getContext('2d');
-                        canvas.width = hiddenImg.width || 32; canvas.height = hiddenImg.height || 32;
-                        ctx.drawImage(hiddenImg, 0, 0, canvas.width, canvas.height);
+                        canvas.width = 32; canvas.height = 32;
+                        ctx.drawImage(hiddenImg, 0, 0, 32, 32);
                         try {
-                            const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+                            const data = ctx.getImageData(0, 0, 32, 32).data;
                             let r=0, g=0, b=0, count=0;
                             for(let i=0; i<data.length; i+=4){
                                 if(data[i+3] < 128 || (data[i]>240 && data[i+1]>240 && data[i+2]>240) || (data[i]<15 && data[i+1]<15 && data[i+2]<15)) continue;
