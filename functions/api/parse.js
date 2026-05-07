@@ -1,14 +1,12 @@
 /**
- * 37° Nav - 边缘智能靶向解析 API (Pages Functions 版)
+ * 37° Nav - 边缘智能靶向解析 API (高清图标解禁版)
  * 架构：Cloudflare Pages + HTMLRewriter + Workers AI
  */
 
 export async function onRequest(context) {
-    // 从 context 中解构出 request 和 env，完美适配你之前的核心逻辑
     const request = context.request;
     const env = context.env;
 
-    // 0. CORS 跨域与预检请求处理
     const corsHeaders = {
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
@@ -20,7 +18,6 @@ export async function onRequest(context) {
     }
 
     try {
-        // 获取目标 URL
         const url = new URL(request.url);
         let targetUrl = url.searchParams.get('url');
 
@@ -41,13 +38,14 @@ export async function onRequest(context) {
         const targetUrlObj = new URL(targetUrl);
         const domain = targetUrlObj.hostname.replace(/^www\./, '');
 
-        // === 第二层：星图知识库短路 ===
+        // === 第二层：星图知识库短路 (已全部升级为真实高清图标) ===
         const knownSites = {
-            'github.com': { title: 'GitHub', icon: 'fa-brands fa-github', description: '全球最大的开源代码托管与版本控制中枢。' },
-            'x.com': { title: 'X (Twitter)', icon: 'fa-brands fa-twitter', description: '全球实时资讯与社交互动网络。' },
-            'chatgpt.com': { title: 'ChatGPT', icon: 'fa-solid fa-robot', description: 'OpenAI 旗下领先的通用人工智能对话助手。' },
-            'youtube.com': { title: 'YouTube', icon: 'fa-brands fa-youtube', description: '全球最大的流媒体视频分享与创作者生态。' },
-            'cloudflare.com': { title: 'Cloudflare', icon: 'fa-solid fa-cloud', description: '全球领先的边缘计算与网络安全防护基建。' }
+            'github.com': { title: 'GitHub', icon: 'https://github.githubassets.com/favicons/favicon.svg', description: '全球最大的开源代码托管与版本控制中枢。' },
+            'x.com': { title: 'X (Twitter)', icon: 'https://abs.twimg.com/favicons/twitter.3.ico', description: '全球实时资讯与社交互动网络。' },
+            'chatgpt.com': { title: 'ChatGPT', icon: 'https://cdn.oaistatic.com/_next/static/media/favicon-32x32.be48395e.png', description: 'OpenAI 旗下领先的通用人工智能对话助手。' },
+            'youtube.com': { title: 'YouTube', icon: 'https://www.youtube.com/s/desktop/10c128fa/img/favicon_144x144.png', description: '全球最大的流媒体视频分享与创作者生态。' },
+            'cloudflare.com': { title: 'Cloudflare', icon: 'https://www.cloudflare.com/favicon.ico', description: '全球领先的边缘计算与网络安全防护基建。' },
+            'nodeseek.com': { title: 'NodeSeek', icon: 'https://www.nodeseek.com/static/favicon.png', description: '极客和开发者的交流社区，主机玩家聚集地。' }
         };
 
         if (knownSites[domain]) {
@@ -56,9 +54,9 @@ export async function onRequest(context) {
             });
         }
 
-        // === 第一层：先遣探测与防反制 ===
+        // === 第一层：先遣探测 ===
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 4500); // 4.5秒熔断
+        const timeoutId = setTimeout(() => controller.abort(), 4500);
 
         let fetchResponse;
         try {
@@ -76,13 +74,13 @@ export async function onRequest(context) {
             clearTimeout(timeoutId);
             return new Response(JSON.stringify({
                 title: domain.charAt(0).toUpperCase() + domain.slice(1),
-                icon: 'fa-solid fa-link', 
+                icon: `https://www.google.com/s2/favicons?domain=${domain}&sz=128`, 
                 description: '⚠️ 目标星体响应超时或拒绝连接，强制熔断。'
             }), { headers: { 'Content-Type': 'application/json', ...corsHeaders } });
         }
 
         // === 第三层：边缘流式剥离 ===
-        let extracted = { title: '', ogTitle: '', desc: '', ogDesc: '', bodyText: '' };
+        let extracted = { title: '', ogTitle: '', desc: '', ogDesc: '', bodyText: '', appleIcon: '', ogImage: '', icon: '', shortcutIcon: '' };
 
         const rewriter = new HTMLRewriter()
             .on('title', { text(text) { extracted.title += text.text; } })
@@ -94,6 +92,17 @@ export async function onRequest(context) {
                     if (name === 'description') extracted.desc = content;
                     if (prop === 'og:description') extracted.ogDesc = content;
                     if (prop === 'og:title') extracted.ogTitle = content;
+                    if (prop === 'og:image') extracted.ogImage = content;
+                }
+            })
+            .on('link', {
+                element(el) {
+                    const rel = (el.getAttribute('rel') || '').toLowerCase();
+                    const href = el.getAttribute('href') || '';
+                    if (!href) return;
+                    if (rel === 'apple-touch-icon') extracted.appleIcon = href;
+                    else if (rel === 'icon') extracted.icon = href;
+                    else if (rel === 'shortcut icon') extracted.shortcutIcon = href;
                 }
             })
             .on('body', { 
@@ -107,7 +116,19 @@ export async function onRequest(context) {
         extracted.bodyText = extracted.bodyText.replace(/\s+/g, ' ').trim();
         const finalTitleRaw = (extracted.ogTitle || extracted.title).trim() || domain;
 
-        // === 第四层：护盾感知与降级兜底 ===
+        // 【核心提取】处理真实的高清图标路径
+        let finalIcon = extracted.appleIcon || extracted.ogImage || extracted.icon || extracted.shortcutIcon;
+        if (finalIcon) {
+            try {
+                finalIcon = new URL(finalIcon, targetUrl).href;
+            } catch (e) {
+                finalIcon = `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
+            }
+        } else {
+            finalIcon = `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
+        }
+
+        // === 第四层：护盾感知 ===
         const wafKeywords = ['just a moment', 'attention required', '验证码', 'cloudflare', 'security check'];
         const bodyLower = extracted.bodyText.toLowerCase();
         const titleLower = finalTitleRaw.toLowerCase();
@@ -116,16 +137,16 @@ export async function onRequest(context) {
         if (isWafDetected || fetchResponse.status === 403 || fetchResponse.status === 503) {
             return new Response(JSON.stringify({
                 title: domain.charAt(0).toUpperCase() + domain.slice(1),
-                icon: 'fa-solid fa-shield-halved',
+                icon: finalIcon,
                 description: '⚠️ 目标星体开启了反爬虫屏障，请手动录入特征。'
             }), { headers: { 'Content-Type': 'application/json', ...corsHeaders } });
         }
 
-        // === 第五层：大语言模型总结 ===
+        // === 第五层：大语言模型 ===
         if (!env.AI) {
             return new Response(JSON.stringify({
                 title: finalTitleRaw,
-                icon: 'fa-solid fa-globe',
+                icon: finalIcon,
                 description: (extracted.ogDesc || extracted.desc).substring(0, 150) || '未检测到 AI 算力节点，基础解析完成。'
             }), { headers: { 'Content-Type': 'application/json', ...corsHeaders } });
         }
@@ -156,17 +177,17 @@ export async function onRequest(context) {
             aiResult.description = rawDesc.substring(0, 150) || '⚠️ AI 语义压缩异常，提取基础描述。';
         }
 
-        // 终极输出 (统一返回 FontAwesome 图标以契合你的星际 UI)
+        // 返回最终数据
         return new Response(JSON.stringify({
             title: aiResult.title || finalTitleRaw,
-            icon: 'fa-solid fa-rocket',
+            icon: finalIcon, // 输出真实图片网址
             description: aiResult.description || '暂无简介'
         }), { headers: { 'Content-Type': 'application/json', ...corsHeaders } });
 
     } catch (globalError) {
         return new Response(JSON.stringify({
             title: "节点解析崩溃",
-            icon: "fa-solid fa-bug",
+            icon: "https://icons.duckduckgo.com/ip3/error.ico",
             description: "⚠️ 目标星体解析引发系统级异常，请手动录入特征。"
         }), { status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
     }

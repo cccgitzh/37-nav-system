@@ -62,11 +62,7 @@
         }
         input:focus, select:focus { outline: none; border-color: var(--brand-cyan); }
 
-        /* 智能解析按钮组专属样式 */
-        .url-group {
-            display: flex;
-            gap: 10px;
-        }
+        .url-group { display: flex; gap: 10px; }
         .btn-parse {
             background: rgba(176, 38, 255, 0.1);
             color: var(--brand-purple);
@@ -77,7 +73,7 @@
             cursor: pointer;
             transition: all 0.3s;
             font-family: 'Courier New', Courier, monospace;
-            white-space: nowrap; /* 保证文字不换行 */
+            white-space: nowrap;
         }
         .btn-parse:hover { background: var(--brand-purple); color: #fff; box-shadow: 0 0 15px rgba(176, 38, 255, 0.4); }
 
@@ -98,7 +94,6 @@
 
         #status-msg { margin-top: 15px; font-size: 0.9rem; text-align: center; }
 
-        /* 列表样式 */
         .node-list { display: flex; flex-direction: column; gap: 15px; }
         .node-item { display: flex; justify-content: space-between; align-items: center; padding: 15px; background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border); border-radius: 6px; }
         .node-info h4 { margin: 0 0 5px 0; color: var(--brand-cyan); }
@@ -143,7 +138,7 @@
                 </div>
 
                 <div class="form-group">
-                    <label>> FontAwesome 图标 (Icon):</label>
+                    <label>> 提取图片/FontAwesome代码 (Icon):</label>
                     <input type="text" id="icon" value="fa-solid fa-link" placeholder="点击解析后自动填充...">
                 </div>
 
@@ -172,19 +167,15 @@
         const statusMsg = document.getElementById('status-msg');
         const nodeListContainer = document.getElementById('node-list-container');
 
-        // ==========================================
-        // 【新增】智能解析靶向雷达逻辑
-        // ==========================================
+        // AI 解析逻辑
         document.getElementById('btn-parse').addEventListener('click', async () => {
             const urlInput = document.getElementById('url').value;
-            
             if (!urlInput) {
                 statusMsg.style.color = "#ff4757";
                 statusMsg.innerText = "> [警告] 请先输入目标网址！";
                 return;
             }
 
-            // 按钮状态变更为解析中
             const parseBtn = document.getElementById('btn-parse');
             const originalBtnText = parseBtn.innerHTML;
             parseBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 解析中...';
@@ -194,7 +185,6 @@
             statusMsg.innerText = "> 正在召唤边缘节点与 AI，执行深度渗透解析...";
 
             try {
-                // 调用我们刚刚写好的 API
                 const response = await fetch('/api/parse', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -203,8 +193,6 @@
 
                 if (response.ok) {
                     const data = await response.json();
-                    
-                    // 核心动作：将 AI 爬取回来的数据，自动填入输入框
                     if (data.title) document.getElementById('title').value = data.title;
                     if (data.description) document.getElementById('description').value = data.description;
                     if (data.icon) document.getElementById('icon').value = data.icon;
@@ -219,15 +207,12 @@
                 statusMsg.style.color = "#ff4757";
                 statusMsg.innerText = "> [系统异常] 边缘解析链路中断。";
             } finally {
-                // 恢复按钮状态
                 parseBtn.innerHTML = originalBtnText;
                 parseBtn.disabled = false;
             }
         });
 
-        // ==========================================
-        // 原有逻辑：拉取列表、删除、提交新增
-        // ==========================================
+        // 获取并渲染列表（支持图片和FA图标兼容）
         async function fetchAndRenderNodes() {
             try {
                 const response = await fetch('/api/links'); 
@@ -238,11 +223,20 @@
                     return;
                 }
                 links.forEach(link => {
+                    const iconPreview = link.icon.startsWith('http')
+                        ? `<img src="${link.icon}" style="width: 20px; height: 20px; border-radius: 4px; object-fit: cover;">`
+                        : `<i class="${link.icon}"></i>`;
+
                     const nodeHtml = `
                         <div class="node-item">
-                            <div class="node-info">
-                                <h4>${link.title}</h4>
-                                <p>${link.url}</p>
+                            <div class="node-info" style="display: flex; gap: 12px; align-items: center;">
+                                <div style="display: flex; align-items: center; justify-content: center; width: 30px; height: 30px; background: rgba(0,242,254,0.1); border-radius: 6px; color: var(--brand-cyan);">
+                                    ${iconPreview}
+                                </div>
+                                <div>
+                                    <h4>${link.title}</h4>
+                                    <p>${link.url}</p>
+                                </div>
                             </div>
                             <button class="btn-delete" onclick="deleteNode(${link.id}, '${link.title}')">
                                 <i class="fa-solid fa-trash"></i> 销毁
@@ -256,6 +250,7 @@
             }
         }
 
+        // 删除节点
         async function deleteNode(id, title) {
             if (!confirm(`警告：确定要永久销毁 [ ${title} ] 节点吗？`)) return;
             try {
@@ -273,6 +268,7 @@
             }
         }
 
+        // 提交表单
         document.getElementById('add-link-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             statusMsg.style.color = "var(--brand-cyan)";
