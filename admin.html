@@ -25,13 +25,12 @@
             background-image: radial-gradient(circle at top right, rgba(189, 147, 249, 0.05) 0%, transparent 40%);
         }
 
-        /* 顶部简易导航 */
         .admin-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 15px; margin-bottom: 25px; }
         .brand { font-size: 1.4rem; font-weight: bold; color: var(--cyan); display: flex; align-items: center; gap: 10px; }
-        .back-link { color: var(--text-muted); text-decoration: none; font-size: 0.9rem; transition: color 0.2s; }
-        .back-link:hover { color: var(--cyan); }
+        .back-link { color: var(--text-muted); text-decoration: none; font-size: 0.9rem; transition: color 0.2s; border: 1px solid transparent; padding: 5px 10px; border-radius: 6px;}
+        .back-link:hover { color: var(--cyan); border-color: var(--cyan); background: rgba(139,233,253,0.1);}
 
-        /* 左右分栏核心布局 (Dashboard Layout) */
+        /* 左右分栏 Dashboard 布局 */
         .dashboard-grid { display: grid; grid-template-columns: 1fr; gap: 25px; max-width: 1400px; margin: 0 auto; }
         @media (min-width: 1024px) { .dashboard-grid { grid-template-columns: 350px 1fr; } }
 
@@ -50,7 +49,7 @@
         .btn-ai { background: rgba(255, 121, 198, 0.1); border-color: var(--pink); color: var(--pink); white-space: nowrap; }
         .btn-ai:hover { background: var(--pink); color: var(--bg); }
         
-        /* 拖拽标签 */
+        /* 类别阵列 */
         .cat-list { display: flex; flex-direction: column; gap: 8px; margin-top: 15px;}
         .cat-tag { background: rgba(0,0,0,0.2); border: 1px solid var(--border); padding: 8px 12px; border-radius: 6px; font-size: 0.85rem; display: flex; align-items: center; gap: 10px; transition: all 0.2s; user-select: none;}
         .cat-tag.dragging { opacity: 0.5; border-style: dashed; border-color: var(--purple); background: rgba(189,147,249,0.1); }
@@ -60,7 +59,7 @@
         .cat-tag i:hover { color: var(--text); }
         .cat-tag i.del:hover { color: var(--red); }
 
-        /* 节点数据表格列 (美化的列表) */
+        /* 节点网格 */
         .node-list { display: grid; grid-template-columns: 1fr; gap: 12px; }
         @media (min-width: 1400px) { .node-list { grid-template-columns: 1fr 1fr; } }
         .node-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 15px; background: rgba(0,0,0,0.2); border: 1px solid var(--border); border-radius: 8px; transition: border-color 0.2s; }
@@ -74,7 +73,7 @@
         .btn-icon.edit:hover { color: var(--cyan); border-color: var(--cyan); background: rgba(139,233,253,0.1);}
         .btn-icon.del:hover { color: var(--red); border-color: var(--red); background: rgba(255,85,85,0.1);}
 
-        /* 赛博弹窗重载 */
+        /* 模态框重载 */
         .cyber-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8); backdrop-filter: blur(5px); display: flex; align-items: center; justify-content: center; z-index: 9999; opacity: 0; pointer-events: none; transition: opacity 0.2s ease; }
         .cyber-overlay.active { opacity: 1; pointer-events: all; }
         .cyber-modal { background: var(--panel); border: 1px solid var(--cyan); border-radius: 12px; padding: 25px; width: 90%; max-width: 450px; transform: scale(0.95); transition: transform 0.2s ease; box-shadow: 0 10px 30px rgba(0,0,0,0.5);}
@@ -91,8 +90,8 @@
 <body>
 
     <div class="admin-header max-w-[1400px] mx-auto">
-        <div class="brand"><i class="fa-solid fa-server"></i> DEEP_CONSOLE</div>
-        <a href="/" class="back-link"><i class="fa-solid fa-arrow-left"></i> 回到前台主枢纽</a>
+        <div class="brand"><i class="fa-solid fa-server"></i> 深度控制终端 <span style="font-size:0.8rem; color:var(--text-muted);">(Console)</span></div>
+        <a href="/" class="back-link"><i class="fa-solid fa-arrow-left"></i> 回到主枢纽</a>
     </div>
 
     <div class="dashboard-grid">
@@ -106,7 +105,7 @@
                     <button onclick="addCategory()" class="btn" style="border-color:var(--purple); color:var(--purple);"><i class="fa-solid fa-plus"></i></button>
                 </div>
                 <div id="cat-list" class="cat-list">
-                    <span style="color: var(--text-muted); font-size: 0.85rem;">Syncing data...</span>
+                    <span style="color: var(--text-muted); font-size: 0.85rem;">正在同步防区数据...</span>
                 </div>
             </div>
 
@@ -114,17 +113,17 @@
                 <h2 style="color: var(--pink);"><i class="fa-solid fa-satellite-dish"></i> 节点探针注入</h2>
                 <form id="add-node-form">
                     <div class="form-group">
-                        <label>目标 URL (先填此项激活 AI)</label>
+                        <label>目标链接 (先填此项激活 AI)</label>
                         <div class="input-btn-group">
                             <input type="url" id="node-url" required placeholder="https://...">
-                            <button type="button" id="btn-parse" class="btn btn-ai"><i class="fa-solid fa-wand-magic-sparkles"></i></button>
+                            <button type="button" id="btn-parse" class="btn btn-ai" title="执行 AI 边缘解析"><i class="fa-solid fa-wand-magic-sparkles"></i></button>
                         </div>
                     </div>
                     <div class="form-group"><label>系统命名 (Title)</label><input type="text" id="node-title" required></div>
-                    <div class="form-group"><label>节点特征 (Description)</label><textarea id="node-desc" rows="2"></textarea></div>
-                    <div class="form-group"><label>高精度图标 (Icon/FA)</label><input type="text" id="node-icon"></div>
+                    <div class="form-group"><label>特征摘要 (Description)</label><textarea id="node-desc" rows="2"></textarea></div>
+                    <div class="form-group"><label>高清图标 (Icon / FA)</label><input type="text" id="node-icon"></div>
                     <div class="form-group"><label>归属防区 (Category)</label><select id="node-category"></select></div>
-                    <button type="submit" class="btn btn-primary">INJECT_NODE</button>
+                    <button type="submit" class="btn btn-primary">注入节点 [ INJECT ]</button>
                     <div id="status-msg" style="text-align:center; font-size:0.8rem; margin-top:10px; height: 16px;"></div>
                 </form>
             </div>
@@ -133,7 +132,7 @@
         <div class="panel" style="border-top: 3px solid var(--cyan);">
             <h2 style="color: var(--cyan);"><i class="fa-solid fa-database"></i> 活跃节点数据库</h2>
             <div class="node-list" id="node-list-container">
-                <span style="color: var(--text-muted); font-size: 0.9rem;">Fetching records...</span>
+                <span style="color: var(--text-muted); font-size: 0.9rem;">正在检索节点记录...</span>
             </div>
         </div>
 
@@ -155,7 +154,7 @@
             showPrompt(title, msg, defaultVal = '') {
                 return new Promise(resolve => {
                     const overlay = this.createContainer('cyber-prompt');
-                    overlay.innerHTML = `<div class="cyber-modal"><div class="cyber-modal-title" style="color:var(--cyan);"><i class="fa-solid fa-terminal"></i> ${title}</div><div class="cyber-modal-msg" style="margin-bottom:15px;">${msg}</div><input type="text" id="prompt-input" value="${defaultVal}" style="width:100%; padding:10px; background:rgba(0,0,0,0.3); border:1px solid var(--border); color:var(--text); border-radius:6px; margin-bottom:20px; outline:none;"><div class="cyber-modal-actions"><button class="btn-modal cancel" id="p-cancel">Cancel</button><button class="btn-modal confirm" id="p-ok">Submit</button></div></div>`;
+                    overlay.innerHTML = `<div class="cyber-modal"><div class="cyber-modal-title" style="color:var(--cyan);"><i class="fa-solid fa-terminal"></i> ${title}</div><div class="cyber-modal-msg" style="margin-bottom:15px;">${msg}</div><input type="text" id="prompt-input" value="${defaultVal}" style="width:100%; padding:10px; background:rgba(0,0,0,0.3); border:1px solid var(--border); color:var(--text); border-radius:6px; margin-bottom:20px; outline:none;"><div class="cyber-modal-actions"><button class="btn-modal cancel" id="p-cancel">取消</button><button class="btn-modal confirm" id="p-ok">确认</button></div></div>`;
                     requestAnimationFrame(() => overlay.classList.add('active'));
                     const input = overlay.querySelector('#prompt-input'); input.focus();
                     overlay.querySelector('#p-cancel').onclick = () => { this.close(overlay); resolve(null); };
@@ -168,7 +167,7 @@
                     const themeColor = isDanger ? 'var(--red)' : 'var(--cyan)';
                     const btnClass = isDanger ? 'danger' : 'confirm';
                     const icon = isDanger ? 'fa-triangle-exclamation' : 'fa-circle-check';
-                    overlay.innerHTML = `<div class="cyber-modal" style="border-color:${themeColor}"><div class="cyber-modal-title" style="color:${themeColor};"><i class="fa-solid ${icon}"></i> ${title}</div><div class="cyber-modal-msg" style="margin-bottom:20px;">${msg}</div><div class="cyber-modal-actions"><button class="btn-modal cancel" id="c-cancel">Cancel</button><button class="btn-modal ${btnClass}" id="c-ok">Confirm</button></div></div>`;
+                    overlay.innerHTML = `<div class="cyber-modal" style="border-color:${themeColor}"><div class="cyber-modal-title" style="color:${themeColor};"><i class="fa-solid ${icon}"></i> ${title}</div><div class="cyber-modal-msg" style="margin-bottom:20px;">${msg}</div><div class="cyber-modal-actions"><button class="btn-modal cancel" id="c-cancel">取消</button><button class="btn-modal ${btnClass}" id="c-ok">确认</button></div></div>`;
                     requestAnimationFrame(() => overlay.classList.add('active'));
                     overlay.querySelector('#c-cancel').onclick = () => { this.close(overlay); resolve(false); };
                     overlay.querySelector('#c-ok').onclick = () => { this.close(overlay); resolve(true); };
@@ -180,18 +179,18 @@
                     const catOptions = globalCategories.map(c => `<option value="${c.name}" ${c.name===node.category?'selected':''}>${c.name}</option>`).join('');
                     overlay.innerHTML = `
                         <div class="cyber-modal" style="max-width: 500px; border-color: var(--cyan);">
-                            <div class="cyber-modal-title" style="color: var(--cyan); border-bottom:1px solid var(--border); padding-bottom:10px; margin-bottom:15px;"><i class="fa-solid fa-pen-ruler"></i> MODIFY_NODE</div>
+                            <div class="cyber-modal-title" style="color: var(--cyan); border-bottom:1px solid var(--border); padding-bottom:10px; margin-bottom:15px;"><i class="fa-solid fa-pen-ruler"></i> 覆写节点配置 (MODIFY)</div>
                             <form id="cyber-edit-form">
-                                <div class="form-group"><label>Title</label><input type="text" id="e-title" value="${node.title}" required></div>
-                                <div class="form-group"><label>URL</label><input type="url" id="e-url" value="${node.url}" required></div>
-                                <div class="form-group"><label>Description</label><textarea id="e-desc" rows="2">${node.description||''}</textarea></div>
+                                <div class="form-group"><label>节点名称 (Title)</label><input type="text" id="e-title" value="${node.title}" required></div>
+                                <div class="form-group"><label>目标链接 (URL)</label><input type="url" id="e-url" value="${node.url}" required></div>
+                                <div class="form-group"><label>特征描述 (Description)</label><textarea id="e-desc" rows="2">${node.description||''}</textarea></div>
                                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
-                                    <div class="form-group"><label>Icon</label><input type="text" id="e-icon" value="${node.icon||''}"></div>
-                                    <div class="form-group"><label>Category</label><select id="e-category">${catOptions}</select></div>
+                                    <div class="form-group"><label>图标地址 (Icon)</label><input type="text" id="e-icon" value="${node.icon||''}"></div>
+                                    <div class="form-group"><label>归属分类 (Category)</label><select id="e-category">${catOptions}</select></div>
                                 </div>
                                 <div class="cyber-modal-actions" style="margin-top: 15px;">
-                                    <button type="button" class="btn-modal cancel" id="e-cancel">Abort</button>
-                                    <button type="submit" class="btn-modal confirm">Update Record</button>
+                                    <button type="button" class="btn-modal cancel" id="e-cancel">放弃修改</button>
+                                    <button type="submit" class="btn-modal confirm">保存覆写</button>
                                 </div>
                             </form>
                         </div>`;
@@ -218,7 +217,7 @@
                 renderCategories();
                 renderNodes();
             } catch (err) {
-                document.getElementById('node-list-container').innerHTML = '<span style="color:var(--red);">Connection failed.</span>';
+                document.getElementById('node-list-container').innerHTML = '<span style="color:var(--red);">核心链路断开。</span>';
             }
         }
 
@@ -274,7 +273,7 @@
         }
 
         async function deleteCategory(id, name) {
-            if (await SysUI.showConfirm('危险操作', `确定要彻底销毁防区 [ ${name} ] 吗？该分类下的节点将被悬空。`, true)) {
+            if (await SysUI.showConfirm('危险操作', `确定要彻底销毁防区 [ ${name} ] 吗？<br>该分类下的节点将被悬空。`, true)) {
                 await fetch('/api/categories', { method: 'DELETE', body: JSON.stringify({ id }) });
                 fetchSystemData();
             }
@@ -322,10 +321,10 @@
         // ==========================================
         document.getElementById('add-node-form').addEventListener('submit', async (e) => {
             e.preventDefault();
-            statusMsg.style.color = "var(--cyan)"; statusMsg.innerText = "Transmitting to D1 Core...";
+            statusMsg.style.color = "var(--cyan)"; statusMsg.innerText = "正在同步至 D1 核心...";
             const payload = { title: document.getElementById('node-title').value, url: document.getElementById('node-url').value, description: document.getElementById('node-desc').value, category: document.getElementById('node-category').value, icon: document.getElementById('node-icon').value, color_theme: 'cyan' };
             if ((await fetch('/api/nodes', { method: 'POST', body: JSON.stringify(payload) })).ok) {
-                statusMsg.style.color = "var(--green)"; statusMsg.innerText = "Injection Successful.";
+                statusMsg.style.color = "var(--green)"; statusMsg.innerText = "节点注入成功。";
                 document.getElementById('add-node-form').reset();
                 setTimeout(() => statusMsg.innerText = "", 3000);
                 fetchSystemData();
@@ -334,11 +333,11 @@
 
         document.getElementById('btn-parse').addEventListener('click', async () => {
             const urlInput = document.getElementById('node-url').value;
-            if (!urlInput) { statusMsg.style.color = "var(--red)"; statusMsg.innerText = "Error: URL missing."; return; }
+            if (!urlInput) { statusMsg.style.color = "var(--red)"; statusMsg.innerText = "错误：URL 为空。"; return; }
             
             const btn = document.getElementById('btn-parse');
             btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; btn.disabled = true;
-            statusMsg.style.color = "var(--pink)"; statusMsg.innerText = "AI Edge Parsing triggered...";
+            statusMsg.style.color = "var(--pink)"; statusMsg.innerText = "边缘 AI 靶向解析中...";
 
             try {
                 const res = await fetch('/api/parse', { method: 'POST', body: JSON.stringify({ url: urlInput }) });
@@ -347,10 +346,10 @@
                     if(data.title) document.getElementById('node-title').value = data.title;
                     if(data.description) document.getElementById('node-desc').value = data.description;
                     if(data.icon) document.getElementById('node-icon').value = data.icon;
-                    statusMsg.style.color = "var(--green)"; statusMsg.innerText = "Parse Complete.";
+                    statusMsg.style.color = "var(--green)"; statusMsg.innerText = "解析完成。";
                 }
             } catch(e) {
-                statusMsg.style.color = "var(--red)"; statusMsg.innerText = "Parse failed.";
+                statusMsg.style.color = "var(--red)"; statusMsg.innerText = "解析失败，请检查 URL。";
             } finally {
                 btn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i>'; btn.disabled = false;
             }
