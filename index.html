@@ -16,19 +16,9 @@
             theme: {
                 extend: {
                     colors: {
-                        /* 纯正 Dracula 官方色卡 */
                         dracula: {
-                            dark: '#1E1F29',    // 极深底色
-                            bg: '#282A36',      // 基础背景
-                            current: '#44475A', // 行高亮/边框
-                            fg: '#F8F8F2',      // 前景文本
-                            comment: '#6272A4', // 注释文本
-                            cyan: '#8BE9FD',
-                            green: '#50FA7B',
-                            pink: '#FF79C6',
-                            purple: '#BD93F9',
-                            red: '#FF5555',
-                            yellow: '#F1FA8C'
+                            dark: '#1E1F29', bg: '#282A36', current: '#44475A', fg: '#F8F8F2', comment: '#6272A4',
+                            cyan: '#8BE9FD', green: '#50FA7B', pink: '#FF79C6', purple: '#BD93F9', red: '#FF5555', yellow: '#F1FA8C'
                         }
                     },
                     fontFamily: { mono: ['"JetBrains Mono"', 'monospace'] }
@@ -52,17 +42,33 @@
             margin-bottom: 50px;
         }
 
-        /* 隐藏横向滚动条，但保持可滑动 */
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-
-        /* 纵向滚动条美化 */
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: #1E1F29; }
         ::-webkit-scrollbar-thumb { background: #6272A4; border-radius: 3px; }
         ::-webkit-scrollbar-thumb:hover { background: #BD93F9; }
 
-        /* 赛博全息模态框 (Dracula版) */
+        /* =====================================
+           动态色彩卡片引擎 (Dynamic Aura)
+           ===================================== */
+        .node-card {
+            border-color: rgba(255, 255, 255, 0.05);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .node-card:hover {
+            border-color: var(--card-color);
+            box-shadow: 0 5px 25px -5px var(--card-color);
+            transform: translateY(-2px);
+        }
+        .node-card:hover .node-title {
+            color: var(--card-color);
+        }
+        .node-icon-box {
+            color: var(--card-color);
+        }
+
+        /* 模态框系统 */
         .cyber-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8); backdrop-filter: blur(5px); display: flex; align-items: center; justify-content: center; z-index: 9999; opacity: 0; pointer-events: none; transition: opacity 0.2s ease; }
         .cyber-overlay.active { opacity: 1; pointer-events: all; }
         .cyber-modal { background: #282A36; border: 1px solid #BD93F9; box-shadow: 0 0 30px rgba(189, 147, 249, 0.2); border-radius: 12px; padding: 25px; width: 90%; max-width: 400px; transform: scale(0.95); transition: transform 0.2s ease; }
@@ -98,14 +104,12 @@
             <div class="flex items-center gap-3 flex-shrink-0">
                 
                 <div class="hidden lg:flex items-center bg-dracula-dark/80 border border-dracula-current rounded-lg p-1 transition-colors focus-within:border-dracula-purple focus-within:bg-dracula-dark shadow-inner">
-                    <form id="web-search-form" class="flex items-center pl-2 pr-1 border-r border-dracula-comment/40">
-                        <select id="engine-select" class="bg-transparent text-dracula-comment hover:text-dracula-cyan text-xs outline-none cursor-pointer">
-                            <option value="https://www.google.com/search?q=">G</option>
-                            <option value="https://www.bing.com/search?q=">B</option>
-                            <option value="https://github.com/search?q=">Hub</option>
-                        </select>
-                        <input type="text" id="web-search-input" placeholder="Search..." required class="bg-transparent text-dracula-fg text-sm outline-none px-2 w-20 focus:w-32 transition-all placeholder-dracula-comment">
-                        <button type="submit" class="text-dracula-comment hover:text-dracula-pink"><i class="fa-solid fa-arrow-right-to-bracket"></i></button>
+                    <form id="web-search-form" class="flex items-center pl-1 pr-1 border-r border-dracula-comment/40">
+                        <button type="button" id="engine-toggle-btn" class="text-dracula-comment hover:text-dracula-cyan text-sm outline-none px-2 transition-colors">
+                            <i id="engine-icon" class="fa-brands fa-google"></i>
+                        </button>
+                        <input type="text" id="web-search-input" placeholder="Search..." required class="bg-transparent text-dracula-fg text-sm outline-none px-1 w-20 focus:w-32 transition-all placeholder-dracula-comment">
+                        <button type="submit" class="text-dracula-comment hover:text-dracula-pink pr-2"><i class="fa-solid fa-arrow-right-to-bracket"></i></button>
                     </form>
                     
                     <div class="flex items-center pl-2 pr-1 relative">
@@ -129,12 +133,11 @@
         <div id="dynamic-zones" class="flex flex-col gap-12"></div>
     </main>
 
-    <footer class="fixed bottom-0 left-0 w-full h-10 bg-dracula-dark border-t border-dracula-current flex items-center justify-between px-6 z-40">
-        <div class="flex items-center gap-3">
-            <i class="fa-solid fa-heart-pulse text-dracula-green animate-pulse text-base"></i>
-            <span class="text-xs font-bold text-dracula-green tracking-wider hidden sm:inline">TELEMETRY_LINK_ACTIVE</span>
+    <footer class="fixed bottom-0 left-0 w-full h-10 bg-dracula-dark border-t border-dracula-current flex items-center justify-center px-6 z-40 shadow-[0_-5px_20px_rgba(0,0,0,0.5)]">
+        <div class="flex items-center gap-2">
+            <i class="fa-solid fa-heart-pulse text-dracula-red animate-pulse text-base drop-shadow-[0_0_8px_rgba(255,85,85,0.8)]"></i>
+            <span id="hud-uptime" class="text-xs font-bold text-dracula-comment tracking-widest"></span>
         </div>
-        <div id="hud-uptime" class="text-xs font-bold text-dracula-purple tracking-wider"></div>
     </footer>
 
     <div id="sys-modal-root"></div>
@@ -159,17 +162,7 @@
             showPrompt(title, msg, type = 'text') {
                 return new Promise(resolve => {
                     const overlay = this.createContainer('cyber-prompt');
-                    overlay.innerHTML = `
-                        <div class="cyber-modal">
-                            <div class="cyber-modal-title" style="color:var(--dracula-cyan);"><i class="fa-solid fa-terminal"></i> ${title}</div>
-                            <div class="cyber-modal-msg" style="color:var(--dracula-fg); margin-bottom:15px;">${msg}</div>
-                            <input type="${type}" id="prompt-input" class="cyber-input" autocomplete="off">
-                            <div class="cyber-modal-actions">
-                                <button class="btn-modal cancel" id="p-cancel">Cancel</button>
-                                <button class="btn-modal confirm" id="p-ok">Authorize</button>
-                            </div>
-                        </div>
-                    `;
+                    overlay.innerHTML = `<div class="cyber-modal"><div class="cyber-modal-title" style="color:var(--dracula-cyan);"><i class="fa-solid fa-terminal"></i> ${title}</div><div class="cyber-modal-msg" style="color:var(--dracula-fg); margin-bottom:15px;">${msg}</div><input type="${type}" id="prompt-input" class="cyber-input" autocomplete="off"><div class="cyber-modal-actions"><button class="btn-modal cancel" id="p-cancel">Cancel</button><button class="btn-modal confirm" id="p-ok">Authorize</button></div></div>`;
                     requestAnimationFrame(() => overlay.classList.add('active'));
                     const input = overlay.querySelector('#prompt-input');
                     input.focus();
@@ -184,16 +177,7 @@
                     const themeColor = isDanger ? '#FF5555' : '#50FA7B';
                     const btnClass = isDanger ? 'danger' : 'confirm';
                     const icon = isDanger ? 'fa-triangle-exclamation' : 'fa-circle-check';
-                    overlay.innerHTML = `
-                        <div class="cyber-modal" style="border-color:${themeColor}">
-                            <div class="cyber-modal-title" style="color:${themeColor};"><i class="fa-solid ${icon}"></i> ${title}</div>
-                            <div class="cyber-modal-msg" style="color:var(--dracula-fg); margin-bottom:20px;">${msg}</div>
-                            <div class="cyber-modal-actions">
-                                <button class="btn-modal cancel" id="c-cancel">Cancel</button>
-                                <button class="btn-modal ${btnClass}" id="c-ok">Confirm</button>
-                            </div>
-                        </div>
-                    `;
+                    overlay.innerHTML = `<div class="cyber-modal" style="border-color:${themeColor}"><div class="cyber-modal-title" style="color:${themeColor};"><i class="fa-solid ${icon}"></i> ${title}</div><div class="cyber-modal-msg" style="color:var(--dracula-fg); margin-bottom:20px;">${msg}</div><div class="cyber-modal-actions"><button class="btn-modal cancel" id="c-cancel">Cancel</button><button class="btn-modal ${btnClass}" id="c-ok">Confirm</button></div></div>`;
                     requestAnimationFrame(() => overlay.classList.add('active'));
                     overlay.querySelector('#c-cancel').onclick = () => { this.close(overlay); resolve(false); };
                     overlay.querySelector('#c-ok').onclick = () => { this.close(overlay); resolve(true); };
@@ -202,20 +186,22 @@
         };
 
         /* =========================================================
-           系统核心逻辑
+           系统核心逻辑 & 动态色彩提取引擎
            ========================================================= */
         let globalCategories = [];
         let globalNodes = [];
         let isAdmin = sessionStorage.getItem('sys_op_token') === 'AUTHORIZED';
         const dynamicZones = document.getElementById('dynamic-zones');
         const navCatContainer = document.getElementById('nav-categories');
+        
+        // Dracula 专属荧光随机色库 (当图片无法读取时的备用色)
+        const draculaColors = ['#8BE9FD', '#50FA7B', '#FF79C6', '#BD93F9', '#FF5555', '#F1FA8C', '#FFB86C'];
 
         async function fetchSystemData() {
             try {
                 const [catRes, nodeRes] = await Promise.all([ fetch('/api/categories'), fetch('/api/nodes') ]);
                 globalCategories = await catRes.json();
                 globalNodes = await nodeRes.json();
-                
                 renderNavbarCategories();
                 renderCategorizedNodes(globalNodes);
             } catch (e) {
@@ -223,43 +209,26 @@
             }
         }
 
-        // 渲染顶部单行分类导航
         function renderNavbarCategories() {
-            if(globalCategories.length === 0) {
-                navCatContainer.innerHTML = '<span class="text-dracula-comment text-xs">No categories found.</span>';
-                return;
-            }
+            if(globalCategories.length === 0) return navCatContainer.innerHTML = '<span class="text-dracula-comment text-xs">No categories found.</span>';
             navCatContainer.innerHTML = globalCategories.map(c => `
-                <a href="#cat-${c.name.replace(/\s+/g, '-')}" class="text-dracula-comment hover:text-dracula-fg hover:bg-dracula-current/50 px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors border border-transparent hover:border-dracula-current">
-                    ${c.name}
-                </a>
+                <a href="#cat-${c.name.replace(/\s+/g, '-')}" class="text-dracula-comment hover:text-dracula-fg hover:bg-dracula-current/50 px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors border border-transparent hover:border-dracula-current">${c.name}</a>
             `).join('');
         }
 
-        // 渲染阵列卡片
         function renderCategorizedNodes(nodes, isAiSearch = false) {
             dynamicZones.innerHTML = '';
             
             if (isAiSearch) {
-                if (nodes.length === 0) {
-                    dynamicZones.innerHTML = '<p class="text-dracula-comment">> 神经元未匹配到相关结果。</p>';
-                    return;
-                }
+                if (nodes.length === 0) return dynamicZones.innerHTML = '<p class="text-dracula-comment">> 神经元未匹配到相关结果。</p>';
                 const zone = document.createElement('div');
-                zone.innerHTML = `
-                    <div class="flex items-center gap-3 mb-6">
-                        <h2 class="text-2xl font-bold text-dracula-pink">AI 检索结果</h2>
-                        <div class="h-px bg-dracula-pink/20 flex-grow"></div>
-                    </div>`;
-                zone.appendChild(buildGrid(nodes, 'pink'));
+                zone.innerHTML = `<div class="flex items-center gap-3 mb-6"><h2 class="text-2xl font-bold text-dracula-pink">AI 检索结果</h2><div class="h-px bg-dracula-pink/30 flex-grow"></div></div>`;
+                zone.appendChild(buildGrid(nodes));
                 dynamicZones.appendChild(zone);
                 return;
             }
 
-            if (nodes.length === 0) {
-                dynamicZones.innerHTML = '<p class="text-dracula-comment">> 扫描未命中任何战术节点。</p>';
-                return;
-            }
+            if (nodes.length === 0) return dynamicZones.innerHTML = '<p class="text-dracula-comment">> 扫描未命中任何战术节点。</p>';
 
             const grouped = {};
             globalCategories.forEach(c => grouped[c.name] = []);
@@ -270,43 +239,66 @@
 
             for (const [catName, catNodes] of Object.entries(grouped)) {
                 if (catNodes.length === 0) continue;
-
                 const zone = document.createElement('div');
-                // 预留顶部单行导航栏的高度 (h-16 = 4rem = 64px)
                 zone.id = `cat-${catName.replace(/\s+/g, '-')}`;
                 zone.className = "scroll-mt-24"; 
-                
-                zone.innerHTML = `
-                    <div class="flex items-center gap-3 mb-6">
-                        <h2 class="text-xl font-bold text-dracula-cyan">${catName}</h2>
-                        <div class="h-px bg-dracula-current flex-grow"></div>
-                    </div>`;
-                
-                zone.appendChild(buildGrid(catNodes, 'cyan'));
+                zone.innerHTML = `<div class="flex items-center gap-3 mb-6"><h2 class="text-xl font-bold text-dracula-cyan">${catName}</h2><div class="h-px bg-dracula-current flex-grow"></div></div>`;
+                zone.appendChild(buildGrid(catNodes));
                 dynamicZones.appendChild(zone);
             }
         }
 
-        function buildGrid(nodesArray, theme = 'cyan') {
+        // 核心网格生成与「千站千面」光影计算
+        function buildGrid(nodesArray) {
             const grid = document.createElement('div');
             grid.className = 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6';
 
             nodesArray.forEach(link => {
                 const card = document.createElement('a');
                 card.href = link.url; card.target = '_blank';
-                // 纯正 Dracula 极简深色毛玻璃卡片
-                card.className = `relative bg-dracula-current/30 hover:bg-dracula-current/60 backdrop-blur-md rounded-xl p-4 flex items-center gap-4 border border-[#ffffff08] hover:border-dracula-${theme}/50 transition-all duration-300 group w-full min-w-0 overflow-hidden block shadow-sm hover:shadow-[0_5px_15px_rgba(0,0,0,0.3)]`;
                 
-                // 【核心修复：彻底解决图裂】通过嵌套隐藏节点来避免内联 JS 字符串报错
+                // 默认注入随机发光色
+                const randomHex = draculaColors[Math.floor(Math.random() * draculaColors.length)];
+                card.style.setProperty('--card-color', randomHex);
+                card.className = `node-card relative bg-dracula-current/30 hover:bg-dracula-current/60 backdrop-blur-md rounded-xl p-4 flex items-center gap-4 group w-full min-w-0 overflow-hidden block border`;
+                
                 let iconHTML = '';
                 if (link.icon && link.icon.startsWith('http')) {
+                    // 显示层：正常的图片加载
                     iconHTML = `
                         <div class="relative w-10 h-10 flex items-center justify-center">
                             <img src="${link.icon}" loading="lazy" alt="icon" class="w-full h-full rounded object-contain filter drop-shadow-md group-hover:scale-110 transition-transform duration-300" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
-                            <i class="fa-solid fa-link text-dracula-purple text-xl hidden group-hover:scale-110 transition-transform duration-300"></i>
+                            <i class="fa-solid fa-link node-icon-box text-xl hidden group-hover:scale-110 transition-transform duration-300"></i>
                         </div>`;
+
+                    // 分析层：幽灵图像加载用于提取主色调
+                    const hiddenImg = new Image();
+                    hiddenImg.crossOrigin = "Anonymous"; // 尝试跨域读取
+                    hiddenImg.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+                        canvas.width = hiddenImg.width || 32;
+                        canvas.height = hiddenImg.height || 32;
+                        ctx.drawImage(hiddenImg, 0, 0, canvas.width, canvas.height);
+                        try {
+                            const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+                            let r=0, g=0, b=0, count=0;
+                            for(let i=0; i<data.length; i+=4){
+                                if(data[i+3] < 128) continue; // 剔除透明像素
+                                if(data[i]>240 && data[i+1]>240 && data[i+2]>240) continue; // 剔除纯白
+                                if(data[i]<15 && data[i+1]<15 && data[i+2]<15) continue; // 剔除纯黑
+                                r += data[i]; g += data[i+1]; b += data[i+2]; count++;
+                            }
+                            if(count > 0) {
+                                // 提取成功，动态覆盖该卡片的 CSS 变量
+                                card.style.setProperty('--card-color', `rgb(${Math.floor(r/count)},${Math.floor(g/count)},${Math.floor(b/count)})`);
+                            }
+                        } catch(e) {} // 如遇防盗链 CORS 拦截，静默失败，保留随机色
+                    };
+                    hiddenImg.src = link.icon;
                 } else {
-                    iconHTML = `<div class="w-10 h-10 flex items-center justify-center"><i class="${link.icon || 'fa-solid fa-link'} text-xl text-dracula-purple group-hover:scale-110 transition-transform duration-300"></i></div>`;
+                    // 非 HTTP 图片直接渲染 FontAwesome，使用默认/随机发光色
+                    iconHTML = `<div class="w-10 h-10 flex items-center justify-center"><i class="${link.icon || 'fa-solid fa-link'} node-icon-box text-xl group-hover:scale-110 transition-transform duration-300"></i></div>`;
                 }
 
                 const adminHtml = isAdmin ? `
@@ -320,7 +312,7 @@
                         ${iconHTML}
                     </div>
                     <div class="flex-1 min-w-0">
-                        <h3 class="text-base font-bold text-dracula-fg truncate group-hover:text-dracula-${theme} transition-colors">${link.title}</h3>
+                        <h3 class="node-title text-base font-bold text-dracula-fg truncate transition-colors">${link.title}</h3>
                         <p class="text-xs text-dracula-comment truncate mt-1">${link.description || '暂无特征数据'}</p>
                     </div>
                 `;
@@ -337,11 +329,11 @@
             const adminLink = document.getElementById('admin-link');
             
             if (isAdmin) {
-                authBtn.innerHTML = '<i class="fa-solid fa-unlock"></i><span class="hidden md:inline ml-1.5">LOGOUT</span>';
+                authBtn.innerHTML = '<i class="fa-solid fa-unlock"></i><span class="hidden sm:inline ml-1.5">LOGOUT</span>';
                 authBtn.className = "text-sm bg-dracula-red hover:bg-[#ff7373] text-dracula-dark font-bold px-3 py-1.5 rounded-lg transition-colors flex items-center shadow-lg shadow-dracula-red/20";
                 adminLink.classList.remove('hidden'); 
             } else {
-                authBtn.innerHTML = '<i class="fa-solid fa-lock"></i><span class="hidden md:inline ml-1.5">SYS_OP</span>';
+                authBtn.innerHTML = '<i class="fa-solid fa-lock"></i><span class="hidden sm:inline ml-1.5">SYS_OP</span>';
                 authBtn.className = "text-sm bg-dracula-purple hover:bg-dracula-pink text-dracula-dark font-bold px-3 py-1.5 rounded-lg transition-colors flex items-center shadow-lg shadow-dracula-purple/20";
                 adminLink.classList.add('hidden');
             }
@@ -369,16 +361,36 @@
             } catch (error) {}
         };
 
-        // 搜索引擎接入
+        // =====================================
+        // 图标化多引擎搜索
+        // =====================================
+        const engines = [
+            { name: 'Google', url: 'https://www.google.com/search?q=', icon: 'fa-google' },
+            { name: 'Bing', url: 'https://www.bing.com/search?q=', icon: 'fa-microsoft' },
+            { name: 'GitHub', url: 'https://github.com/search?q=', icon: 'fa-github' }
+        ];
+        let currentEngineIdx = 0;
+        
+        document.getElementById('engine-toggle-btn').addEventListener('click', (e) => {
+            e.preventDefault();
+            currentEngineIdx = (currentEngineIdx + 1) % engines.length;
+            document.getElementById('engine-icon').className = `fa-brands ${engines[currentEngineIdx].icon}`;
+        });
+
+        document.getElementById('web-search-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const query = document.getElementById('web-search-input').value;
+            window.open(engines[currentEngineIdx].url + encodeURIComponent(query), '_blank');
+        });
+
+        // 边缘 AI 检索
         let aiTimeout = null;
         document.getElementById('ai-filter-input').addEventListener('input', (e) => {
             clearTimeout(aiTimeout);
             const query = e.target.value.trim();
             if (!query) { renderCategorizedNodes(globalNodes); return; }
-            
             const localFiltered = globalNodes.filter(n => n.title.toLowerCase().includes(query.toLowerCase()) || (n.description && n.description.toLowerCase().includes(query.toLowerCase())));
             renderCategorizedNodes(localFiltered);
-
             aiTimeout = setTimeout(async () => {
                 try {
                     const res = await fetch('/api/search?q=' + encodeURIComponent(query));
@@ -388,20 +400,30 @@
             }, 800);
         });
 
-        document.getElementById('web-search-form').addEventListener('submit', (e) => {
-            e.preventDefault();
-            window.open(document.getElementById('engine-select').value + encodeURIComponent(document.getElementById('web-search-input').value), '_blank');
-        });
-
-        // 底部时钟引擎
-        const gTime = new Date('2024-01-01T00:00:00Z').getTime();
-        setInterval(() => {
-            const d = new Date().getTime() - gTime;
-            document.getElementById('hud-uptime').textContent = `UPTIME: ${Math.floor(d/86400000)}D ${Math.floor((d%86400000)/3600000)}H`;
-        }, 60000); 
-        const dInit = new Date().getTime() - gTime;
-        document.getElementById('hud-uptime').textContent = `UPTIME: ${Math.floor(dInit/86400000)}D ${Math.floor((dInit%86400000)/3600000)}H`;
-
+        // =====================================
+        // 精准时钟引擎算法
+        // =====================================
+        const gTime = new Date('2024-01-01T00:00:00Z').getTime(); // 创世纪元
+        
+        function updateUptime() {
+            const diff = new Date().getTime() - gTime;
+            let days = Math.floor(diff / 86400000);
+            
+            const years = Math.floor(days / 365);
+            days %= 365;
+            const months = Math.floor(days / 30);
+            days %= 30; // 粗略计算剩余天数
+            
+            const hours = Math.floor((diff % 86400000) / 3600000);
+            const mins = Math.floor((diff % 3600000) / 60000);
+            const secs = Math.floor((diff % 60000) / 1000);
+            
+            document.getElementById('hud-uptime').innerHTML = 
+                `小破站苟且了 ${years}年/${months}月/${days}日/${hours}时/${mins}分/${secs}秒`;
+        }
+        
+        setInterval(updateUptime, 1000);
+        updateUptime();
         updateAdminUI();
         fetchSystemData();
     </script>
