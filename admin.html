@@ -41,7 +41,6 @@
         .btn-ai { background: rgba(255, 121, 198, 0.1); border-color: var(--pink); color: var(--pink); white-space: nowrap; }
         .btn-ai:hover { background: var(--pink); color: var(--bg); }
         
-        /* 类别阵列 */
         .cat-list { display: flex; flex-direction: column; gap: 8px; margin-top: 15px;}
         .cat-tag { background: rgba(0,0,0,0.2); border: 1px solid var(--border); padding: 8px 12px; border-radius: 6px; font-size: 0.85rem; display: flex; align-items: center; gap: 10px; transition: all 0.2s; user-select: none;}
         .cat-tag.dragging { opacity: 0.5; border-style: dashed; border-color: var(--purple); background: rgba(189,147,249,0.1); }
@@ -51,7 +50,6 @@
         .cat-tag i:hover { color: var(--text); }
         .cat-tag i.del:hover { color: var(--red); }
 
-        /* 节点网格 */
         .node-list { display: grid; grid-template-columns: 1fr; gap: 12px; }
         @media (min-width: 1400px) { .node-list { grid-template-columns: 1fr 1fr; } }
         .node-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 15px; background: rgba(0,0,0,0.2); border: 1px solid var(--border); border-radius: 8px; transition: border-color 0.2s; }
@@ -65,11 +63,19 @@
         .btn-icon.edit:hover { color: var(--cyan); border-color: var(--cyan); background: rgba(139,233,253,0.1);}
         .btn-icon.del:hover { color: var(--red); border-color: var(--red); background: rgba(255,85,85,0.1);}
 
-        /* 模态框重载 */
+        /* ===================================================
+           UI优化：模态框支持 Relative 坐标与右上角关闭按钮
+           =================================================== */
         .cyber-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8); backdrop-filter: blur(5px); display: flex; align-items: center; justify-content: center; z-index: 9999; opacity: 0; pointer-events: none; transition: opacity 0.2s ease; }
         .cyber-overlay.active { opacity: 1; pointer-events: all; }
-        .cyber-modal { background: var(--panel); border: 1px solid var(--cyan); border-radius: 12px; padding: 25px; width: 90%; max-width: 450px; transform: scale(0.95); transition: transform 0.2s ease; box-shadow: 0 10px 30px rgba(0,0,0,0.5);}
+        
+        .cyber-modal { position: relative; background: var(--panel); border: 1px solid var(--cyan); border-radius: 12px; padding: 25px; width: 90%; max-width: 450px; transform: scale(0.95); transition: transform 0.2s ease; box-shadow: 0 10px 30px rgba(0,0,0,0.5);}
         .cyber-overlay.active .cyber-modal { transform: scale(1); }
+        
+        /* 右上角关闭大X */
+        .modal-close-x { position: absolute; top: 15px; right: 20px; color: var(--text-muted); font-size: 1.2rem; cursor: pointer; transition: color 0.2s; }
+        .modal-close-x:hover { color: var(--red); }
+
         .btn-modal { padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: bold; border: 1px solid; transition: all 0.2s; background: transparent; font-family: inherit;}
         .btn-modal.cancel { border-color: var(--text-muted); color: var(--text-muted); }
         .btn-modal.cancel:hover { background: var(--border); color: var(--text); }
@@ -77,9 +83,6 @@
         .btn-modal.confirm:hover { background: var(--cyan); color: var(--bg); }
         .btn-modal.danger { border-color: var(--red); color: var(--red); background: rgba(255,85,85,0.1); }
         .btn-modal.danger:hover { background: var(--red); color: var(--text); }
-        
-        /* 高清无模糊心跳 */
-        .sharp-heart { text-shadow: 0 0 3px rgba(255, 85, 85, 0.3); }
     </style>
 </head>
 <body>
@@ -149,10 +152,23 @@
             showPrompt(title, msg, defaultVal = '') {
                 return new Promise(resolve => {
                     const overlay = this.createContainer('cyber-prompt');
-                    overlay.innerHTML = `<div class="cyber-modal"><div class="cyber-modal-title" style="color:var(--cyan);"><i class="fa-solid fa-terminal"></i> ${title}</div><div class="cyber-modal-msg" style="margin-bottom:15px;">${msg}</div><input type="text" id="prompt-input" value="${defaultVal}" style="width:100%; padding:10px; background:rgba(0,0,0,0.3); border:1px solid var(--border); color:var(--text); border-radius:6px; margin-bottom:20px; outline:none;"><div class="cyber-modal-actions"><button class="btn-modal cancel" id="p-cancel">取消</button><button class="btn-modal confirm" id="p-ok">确认</button></div></div>`;
+                    overlay.innerHTML = `
+                        <div class="cyber-modal">
+                            <i class="fa-solid fa-xmark modal-close-x" id="p-close-x"></i>
+                            <div class="cyber-modal-title" style="color:var(--cyan);"><i class="fa-solid fa-terminal"></i> ${title}</div>
+                            <div class="cyber-modal-msg" style="margin-bottom:15px;">${msg}</div>
+                            <input type="text" id="prompt-input" value="${defaultVal}" style="width:100%; padding:10px; background:rgba(0,0,0,0.3); border:1px solid var(--border); color:var(--text); border-radius:6px; margin-bottom:20px; outline:none;">
+                            <div class="cyber-modal-actions">
+                                <button class="btn-modal cancel" id="p-cancel">取消</button>
+                                <button class="btn-modal confirm" id="p-ok">确认</button>
+                            </div>
+                        </div>`;
                     requestAnimationFrame(() => overlay.classList.add('active'));
                     const input = overlay.querySelector('#prompt-input'); input.focus();
-                    overlay.querySelector('#p-cancel').onclick = () => { this.close(overlay); resolve(null); };
+                    
+                    const cancelLogic = () => { this.close(overlay); resolve(null); };
+                    overlay.querySelector('#p-cancel').onclick = cancelLogic;
+                    overlay.querySelector('#p-close-x').onclick = cancelLogic;
                     overlay.querySelector('#p-ok').onclick = () => { this.close(overlay); resolve(input.value); };
                 });
             },
@@ -162,9 +178,21 @@
                     const themeColor = isDanger ? 'var(--red)' : 'var(--cyan)';
                     const btnClass = isDanger ? 'danger' : 'confirm';
                     const icon = isDanger ? 'fa-triangle-exclamation' : 'fa-circle-check';
-                    overlay.innerHTML = `<div class="cyber-modal" style="border-color:${themeColor}"><div class="cyber-modal-title" style="color:${themeColor};"><i class="fa-solid ${icon}"></i> ${title}</div><div class="cyber-modal-msg" style="margin-bottom:20px;">${msg}</div><div class="cyber-modal-actions"><button class="btn-modal cancel" id="c-cancel">取消</button><button class="btn-modal ${btnClass}" id="c-ok">确认</button></div></div>`;
+                    overlay.innerHTML = `
+                        <div class="cyber-modal" style="border-color:${themeColor}">
+                            <i class="fa-solid fa-xmark modal-close-x" id="c-close-x"></i>
+                            <div class="cyber-modal-title" style="color:${themeColor};"><i class="fa-solid ${icon}"></i> ${title}</div>
+                            <div class="cyber-modal-msg" style="margin-bottom:20px;">${msg}</div>
+                            <div class="cyber-modal-actions">
+                                <button class="btn-modal cancel" id="c-cancel">取消</button>
+                                <button class="btn-modal ${btnClass}" id="c-ok">确认</button>
+                            </div>
+                        </div>`;
                     requestAnimationFrame(() => overlay.classList.add('active'));
-                    overlay.querySelector('#c-cancel').onclick = () => { this.close(overlay); resolve(false); };
+                    
+                    const cancelLogic = () => { this.close(overlay); resolve(false); };
+                    overlay.querySelector('#c-cancel').onclick = cancelLogic;
+                    overlay.querySelector('#c-close-x').onclick = cancelLogic;
                     overlay.querySelector('#c-ok').onclick = () => { this.close(overlay); resolve(true); };
                 });
             },
@@ -174,10 +202,17 @@
                     const catOptions = globalCategories.map(c => `<option value="${c.name}" ${c.name===node.category?'selected':''}>${c.name}</option>`).join('');
                     overlay.innerHTML = `
                         <div class="cyber-modal" style="max-width: 500px; border-color: var(--cyan);">
+                            <i class="fa-solid fa-xmark modal-close-x" id="e-close-x"></i>
                             <div class="cyber-modal-title" style="color: var(--cyan); border-bottom:1px solid var(--border); padding-bottom:10px; margin-bottom:15px;"><i class="fa-solid fa-pen-ruler"></i> 覆写节点配置 (MODIFY)</div>
                             <form id="cyber-edit-form">
+                                <div class="form-group">
+                                    <label>目标链接 (URL)</label>
+                                    <div class="input-btn-group">
+                                        <input type="url" id="e-url" value="${node.url}" required>
+                                        <button type="button" id="e-btn-parse" class="btn btn-ai" title="AI边缘重解"><i class="fa-solid fa-wand-magic-sparkles"></i></button>
+                                    </div>
+                                </div>
                                 <div class="form-group"><label>节点名称 (Title)</label><input type="text" id="e-title" value="${node.title}" required></div>
-                                <div class="form-group"><label>目标链接 (URL)</label><input type="url" id="e-url" value="${node.url}" required></div>
                                 <div class="form-group"><label>特征描述 (Description)</label><textarea id="e-desc" rows="2">${node.description||''}</textarea></div>
                                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
                                     <div class="form-group"><label>图标地址 (Icon)</label><input type="text" id="e-icon" value="${node.icon||''}"></div>
@@ -190,7 +225,31 @@
                             </form>
                         </div>`;
                     requestAnimationFrame(() => overlay.classList.add('active'));
-                    overlay.querySelector('#e-cancel').onclick = () => { this.close(overlay); resolve(null); };
+                    
+                    const cancelLogic = () => { this.close(overlay); resolve(null); };
+                    overlay.querySelector('#e-cancel').onclick = cancelLogic;
+                    overlay.querySelector('#e-close-x').onclick = cancelLogic;
+                    
+                    // 【重磅植入】编辑面板的独立 AI 解析引擎
+                    const btnParse = overlay.querySelector('#e-btn-parse');
+                    btnParse.onclick = async () => {
+                        const urlInput = overlay.querySelector('#e-url').value;
+                        if (!urlInput) return;
+                        const oriHtml = btnParse.innerHTML;
+                        btnParse.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; btnParse.disabled = true;
+                        try {
+                            const res = await fetch('/api/parse', { method: 'POST', body: JSON.stringify({ url: urlInput }) });
+                            if (res.ok) {
+                                const data = await res.json();
+                                if(data.title) overlay.querySelector('#e-title').value = data.title;
+                                if(data.description) overlay.querySelector('#e-desc').value = data.description;
+                                if(data.icon) overlay.querySelector('#e-icon').value = data.icon;
+                            }
+                        } finally {
+                            btnParse.innerHTML = oriHtml; btnParse.disabled = false;
+                        }
+                    };
+
                     overlay.querySelector('#cyber-edit-form').onsubmit = (e) => {
                         e.preventDefault();
                         resolve({ id: node.id, title: overlay.querySelector('#e-title').value, url: overlay.querySelector('#e-url').value, description: overlay.querySelector('#e-desc').value, icon: overlay.querySelector('#e-icon').value, category: overlay.querySelector('#e-category').value, color_theme: 'cyan' });
@@ -216,9 +275,6 @@
             }
         }
 
-        // ==========================================
-        // 分类核心 (含原生的拖拽排序算法)
-        // ==========================================
         function renderCategories() {
             const list = document.getElementById('cat-list');
             document.getElementById('node-category').innerHTML = globalCategories.map(c => `<option value="${c.name}">${c.name}</option>`).join('') || '<option value="Default">Default</option>';
@@ -274,9 +330,6 @@
             }
         }
 
-        // ==========================================
-        // 节点列表渲染
-        // ==========================================
         function renderNodes() {
             const container = document.getElementById('node-list-container');
             if (globalNodes.length === 0) return container.innerHTML = '<span style="color:var(--text-muted);">暂无记录</span>';
@@ -311,9 +364,6 @@
             }
         };
 
-        // ==========================================
-        // 节点注入与 AI 抓取
-        // ==========================================
         document.getElementById('add-node-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             statusMsg.style.color = "var(--cyan)"; statusMsg.innerText = "正在同步至 D1 核心...";

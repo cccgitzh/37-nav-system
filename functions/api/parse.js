@@ -1,5 +1,5 @@
 /**
- * 37° Nav - 边缘智能靶向解析 API (严谨方形图标版)
+ * 37° Nav - 边缘智能靶向解析 API (Llama-3.1 强认知版)
  * 架构：Cloudflare Pages + HTMLRewriter + Workers AI
  */
 
@@ -28,9 +28,13 @@ export async function onRequest(context) {
         if (!targetUrl.startsWith('http')) targetUrl = 'https://' + targetUrl;
         
         const targetUrlObj = new URL(targetUrl);
-        const domain = targetUrlObj.hostname.replace(/^www\./, '');
+        let domain = targetUrlObj.hostname.replace(/^www\./, '');
+        
+        // 提取根域名 (例如 mail.google.com -> google.com)，用于应对大厂矩阵图标共享机制
+        const domainParts = domain.split('.');
+        const rootDomain = domainParts.length > 2 ? domainParts.slice(-2).join('.') : domain;
 
-        // 知识库短路
+        // 星图知识库短路
         const knownSites = {
             'github.com': { title: 'GitHub', icon: 'https://github.githubassets.com/favicons/favicon.svg', description: '全球最大的开源代码托管与版本控制中枢。' },
             'x.com': { title: 'X (Twitter)', icon: 'https://abs.twimg.com/favicons/twitter.3.ico', description: '全球实时资讯与社交互动网络。' },
@@ -81,7 +85,6 @@ export async function onRequest(context) {
                     const rel = (el.getAttribute('rel') || '').toLowerCase();
                     const href = el.getAttribute('href') || '';
                     if (!href) return;
-                    // 【核心修复】严格只抓取方形图标，彻底抛弃可能导致长方形的 og:image
                     if (rel === 'apple-touch-icon' || rel === 'apple-touch-icon-precomposed') extracted.appleIcon = href;
                     else if (rel === 'icon') extracted.icon = href;
                     else if (rel === 'shortcut icon') extracted.shortcutIcon = href;
@@ -94,18 +97,18 @@ export async function onRequest(context) {
         extracted.bodyText = extracted.bodyText.replace(/\s+/g, ' ').trim();
         const finalTitleRaw = (extracted.ogTitle || extracted.title).trim() || domain;
 
-        // 【严格验证逻辑】
+        // 【大厂矩阵图标算法升级】
         let finalIcon = extracted.appleIcon || extracted.icon || extracted.shortcutIcon;
         if (finalIcon) {
             try {
                 finalIcon = new URL(finalIcon, targetUrl).href;
             } catch (e) {
-                // 如果解析出的 URL 是坏的，使用 Google 128px 纯方形图标接口兜底
+                // 回退到子域名图标嗅探
                 finalIcon = `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
             }
         } else {
-            // 如果没抓到标准 Icon，直接用 Google 接口兜底
-            finalIcon = `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
+            // 如果连标签都没写，直接穿透到根域名去拉取公司主图标！
+            finalIcon = `https://www.google.com/s2/favicons?domain=${rootDomain}&sz=128`;
         }
 
         const wafKeywords = ['just a moment', 'attention required', '验证码', 'cloudflare', 'security check'];
@@ -121,19 +124,29 @@ export async function onRequest(context) {
         let aiResult = { title: finalTitleRaw, description: rawDesc.substring(0, 100) };
 
         try {
-            const aiResponse = await env.AI.run('@cf/meta/llama-3-8b-instruct', { 
+            // 【重磅换代：采用 Llama-3.1-8B-Instruct 引擎 + 格式锁死 Prompt】
+            const aiResponse = await env.AI.run('@cf/meta/llama-3.1-8b-instruct', { 
                 messages: [
-                    { role: 'system', content: `你是一个资深网民。请根据网页内容，一针见血总结网站用途，拒绝废话。强制返回严谨的JSON格式：{"title": "精简名称", "description": "中文总结"}` },
-                    { role: 'user', content: `标题: ${finalTitleRaw}\n描述: ${rawDesc}\n正文: ${extracted.bodyText}`.substring(0, 1200) }
+                    { role: 'system', content: `你是一个精通网页元数据的网络极客。请分析用户提供的网页源码并提取核心信息。
+限制指令：
+1. 只能使用简体中文输出。
+2. 提炼网站核心用途，一针见血，绝不废话，不需要包含“这是一个提供...”之类的字眼。
+3. 你只能输出纯JSON格式，严禁包含任何Markdown代码块(如\`\`\`json)、换行符或额外解释。
+4. 严格按照此格式输出：{"title": "网站精简名称", "description": "高度浓缩的中文介绍"}。` },
+                    { role: 'user', content: `TITLE: ${finalTitleRaw}\nDESC: ${rawDesc}\nTEXT: ${extracted.bodyText}`.substring(0, 1500) }
                 ] 
             });
+            
+            // 极致净化的 JSON 正则提取
             const jsonMatch = (aiResponse.response || '').match(/\{[\s\S]*\}/);
             if (jsonMatch) {
                 const parsed = JSON.parse(jsonMatch[0]);
                 if (parsed.title) aiResult.title = parsed.title;
                 if (parsed.description) aiResult.description = parsed.description;
             }
-        } catch (e) {}
+        } catch (e) {
+            console.error("AI 引擎异常或 JSON 解析失败:", e);
+        }
 
         return new Response(JSON.stringify({
             title: aiResult.title || finalTitleRaw,
