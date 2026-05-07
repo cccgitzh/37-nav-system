@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>37° Nav - 舰长控制台 4.0</title>
+    <title>37° Nav - 舰长控制台 [深度重构版]</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
@@ -14,54 +14,71 @@
             --brand-emerald: #10b981;
             --text-main: #f3f4f6;
             --glass-bg: rgba(255, 255, 255, 0.03);
-            --glass-border: rgba(255, 255, 255, 0.08);
+            --glass-border: rgba(255, 255, 255, 0.1);
         }
 
         body {
-            background-color: var(--bg-dark);
-            color: var(--text-main);
-            font-family: 'Courier New', Courier, monospace;
-            display: flex;
-            justify-content: center;
-            padding: 40px 20px;
-            margin: 0;
-            background-image: radial-gradient(circle at 50% -20%, #1e293b 0%, transparent 50%);
-            min-height: 100vh;
-            box-sizing: border-box;
+            background-color: var(--bg-dark); color: var(--text-main); font-family: 'Courier New', Courier, monospace;
+            display: flex; justify-content: center; padding: 40px 20px; margin: 0;
+            background-image: radial-gradient(circle at 50% -20%, #1e293b 0%, transparent 50%); min-height: 100vh; box-sizing: border-box;
         }
 
-        .admin-container { w-full; max-width: 800px; display: flex; flex-direction: column; gap: 30px; width: 100%; }
-        .panel { background: var(--glass-bg); border: 1px solid var(--brand-cyan); border-radius: 12px; padding: 30px; box-shadow: 0 0 20px rgba(0, 242, 254, 0.1); }
-        h2 { margin-top: 0; color: var(--brand-cyan); border-bottom: 1px solid var(--glass-border); padding-bottom: 15px;}
+        /* 基础面板与表单 */
+        .admin-container { max-width: 850px; display: flex; flex-direction: column; gap: 30px; width: 100%; }
+        .panel { background: var(--glass-bg); border: 1px solid var(--brand-cyan); border-radius: 12px; padding: 30px; box-shadow: 0 0 20px rgba(0, 242, 254, 0.05); }
+        h2 { margin-top: 0; color: var(--brand-cyan); border-bottom: 1px solid var(--glass-border); padding-bottom: 15px; font-size: 1.3rem;}
         .form-group { margin-bottom: 20px; }
         label { display: block; margin-bottom: 8px; color: var(--text-main); font-size: 0.9rem;}
-        input, select, textarea { width: 100%; padding: 12px; background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border); color: var(--brand-cyan); border-radius: 6px; box-sizing: border-box; font-family: 'Courier New', Courier, monospace; }
-        input:focus, select:focus, textarea:focus { outline: none; border-color: var(--brand-cyan); }
-        
-        .url-group { display: flex; gap: 10px; }
-        .btn-parse { background: rgba(176, 38, 255, 0.1); color: var(--brand-purple); border: 1px solid var(--brand-purple); border-radius: 6px; padding: 0 20px; font-weight: bold; cursor: pointer; transition: all 0.3s; white-space: nowrap; }
-        .btn-parse:hover { background: var(--brand-purple); color: #fff; }
-        .btn-submit { width: 100%; padding: 15px; background: rgba(0, 242, 254, 0.1); color: var(--brand-cyan); border: 1px solid var(--brand-cyan); border-radius: 6px; font-weight: bold; font-size: 1.1rem; cursor: pointer; transition: all 0.3s; }
-        .btn-submit:hover { background: var(--brand-cyan); color: var(--bg-dark); }
-        
-        #status-msg { margin-top: 15px; font-size: 0.9rem; text-align: center; }
-        
-        .node-list { display: flex; flex-direction: column; gap: 10px; }
-        .node-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 15px; background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border); border-radius: 6px; }
-        .node-info h4 { margin: 0 0 5px 0; color: var(--brand-cyan); }
-        .node-info p { margin: 0; font-size: 0.8rem; color: #888; }
-        
-        .btn-icon { background: rgba(255,255,255,0.05); color: var(--text-main); border: 1px solid var(--glass-border); padding: 8px 12px; border-radius: 4px; cursor: pointer; transition: all 0.3s; }
-        .btn-icon:hover { background: rgba(255,255,255,0.2); }
-        .btn-delete { color: var(--brand-red); border-color: rgba(255, 71, 87, 0.3); }
-        .btn-delete:hover { background: var(--brand-red); color: white; border-color: var(--brand-red); }
-        .btn-edit { color: var(--brand-emerald); border-color: rgba(16, 185, 129, 0.3); }
-        .btn-edit:hover { background: var(--brand-emerald); color: white; border-color: var(--brand-emerald); }
-
-        /* 极客模态框 */
-        dialog { background: var(--bg-dark); border: 1px solid var(--brand-cyan); box-shadow: 0 0 30px rgba(0, 242, 254, 0.2); border-radius: 12px; width: 90%; max-width: 500px; color: var(--text-main); }
-        dialog::backdrop { background: rgba(0,0,0,0.8); backdrop-filter: blur(5px); }
+        input, select, textarea { width: 100%; padding: 12px; background: rgba(0,0,0,0.5); border: 1px solid var(--glass-border); color: var(--brand-cyan); border-radius: 6px; box-sizing: border-box; font-family: 'Courier New', Courier, monospace; transition: all 0.3s;}
+        input:focus, select:focus, textarea:focus { outline: none; border-color: var(--brand-cyan); box-shadow: 0 0 10px rgba(0,242,254,0.1);}
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        
+        /* 按钮系统 */
+        .url-group { display: flex; gap: 10px; }
+        .btn { padding: 10px 20px; border-radius: 6px; font-weight: bold; cursor: pointer; transition: all 0.2s; font-family: inherit; display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 1px solid transparent; background: transparent; }
+        .btn-parse { border-color: var(--brand-purple); color: var(--brand-purple); background: rgba(176, 38, 255, 0.1); white-space: nowrap; }
+        .btn-parse:hover { background: var(--brand-purple); color: #fff; box-shadow: 0 0 15px rgba(176,38,255,0.4); }
+        .btn-submit { width: 100%; padding: 15px; border-color: var(--brand-cyan); color: var(--brand-cyan); background: rgba(0, 242, 254, 0.1); font-size: 1.1rem; margin-top: 10px;}
+        .btn-submit:hover { background: var(--brand-cyan); color: var(--bg-dark); box-shadow: 0 0 15px rgba(0,242,254,0.4);}
+        
+        #status-msg { margin-top: 15px; font-size: 0.9rem; text-align: center; height: 20px;}
+        
+        /* 列表渲染区 */
+        .node-list { display: flex; flex-direction: column; gap: 12px; }
+        .node-item { display: flex; justify-content: space-between; align-items: center; padding: 15px; background: rgba(0,0,0,0.4); border: 1px solid var(--glass-border); border-radius: 8px; transition: transform 0.2s; }
+        .node-item:hover { border-color: var(--brand-cyan); transform: translateX(2px); }
+        .node-info h4 { margin: 0 0 5px 0; color: var(--brand-cyan); font-size: 1.05rem;}
+        .node-info p { margin: 0; font-size: 0.8rem; color: #777; }
+        
+        .action-btns { display: flex; gap: 8px; }
+        .btn-icon { background: rgba(255,255,255,0.05); color: var(--text-main); border: 1px solid var(--glass-border); width: 32px; height: 32px; border-radius: 6px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center;}
+        .btn-icon.edit:hover { background: var(--brand-emerald); color: white; border-color: var(--brand-emerald); box-shadow: 0 0 10px rgba(16,185,129,0.4);}
+        .btn-icon.del:hover { background: var(--brand-red); color: white; border-color: var(--brand-red); box-shadow: 0 0 10px rgba(255,71,87,0.4);}
+
+        /* 分类标签 */
+        .cat-tag { background: rgba(176, 38, 255, 0.1); border: 1px solid rgba(176,38,255,0.3); padding: 6px 12px; border-radius: 6px; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 8px; color: #ddd;}
+        .cat-tag i { cursor: pointer; opacity: 0.6; transition: opacity 0.2s; }
+        .cat-tag i:hover { opacity: 1; }
+        .cat-tag i.edit:hover { color: var(--brand-emerald); }
+        .cat-tag i.del:hover { color: var(--brand-red); }
+
+        /* =========================================
+           赛博全息模态框系统 (替代原生 Alert/Confirm)
+           ========================================= */
+        .cyber-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; z-index: 9999; opacity: 0; pointer-events: none; transition: opacity 0.2s ease; }
+        .cyber-overlay.active { opacity: 1; pointer-events: all; }
+        .cyber-modal { background: var(--bg-dark); border: 1px solid var(--brand-cyan); box-shadow: 0 0 40px rgba(0, 242, 254, 0.15); border-radius: 12px; padding: 25px; width: 90%; max-width: 450px; transform: scale(0.95) translateY(10px); transition: transform 0.2s ease; }
+        .cyber-overlay.active .cyber-modal { transform: scale(1) translateY(0); }
+        .cyber-modal-title { font-weight: bold; font-size: 1.1rem; margin-bottom: 10px; display: flex; align-items: center; gap: 8px;}
+        .cyber-modal-msg { color: #aaa; font-size: 0.9rem; line-height: 1.5; margin-bottom: 20px;}
+        .cyber-modal-actions { display: flex; justify-content: flex-end; gap: 12px; }
+        .btn-modal { padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: bold; border: 1px solid; transition: all 0.2s; background: transparent; font-family: inherit;}
+        .btn-modal.cancel { border-color: #666; color: #888; }
+        .btn-modal.cancel:hover { background: #444; color: #fff; }
+        .btn-modal.confirm { border-color: var(--brand-cyan); color: var(--brand-cyan); background: rgba(0,242,254,0.1); }
+        .btn-modal.confirm:hover { background: var(--brand-cyan); color: var(--bg-dark); }
+        .btn-modal.danger { border-color: var(--brand-red); color: var(--brand-red); background: rgba(255,71,87,0.1); }
+        .btn-modal.danger:hover { background: var(--brand-red); color: #fff; }
     </style>
 </head>
 <body>
@@ -70,11 +87,11 @@
         
         <div class="panel" style="border-color: var(--brand-purple);">
             <h2 style="color: var(--brand-purple);"><i class="fa-solid fa-folder-tree"></i> 类别防区设置 (Category)</h2>
-            <div class="url-group mb-4" style="margin-bottom: 15px;">
-                <input type="text" id="new-cat-name" placeholder="> 输入新防区名称..." style="border-color: var(--brand-purple);">
-                <button onclick="addCategory()" class="btn-parse">ADD_CAT</button>
+            <div class="url-group mb-4" style="margin-bottom: 20px;">
+                <input type="text" id="new-cat-name" placeholder="> 输入新防区名称..." style="border-color: rgba(176,38,255,0.4);">
+                <button onclick="addCategory()" class="btn btn-parse">ADD_CAT</button>
             </div>
-            <div id="cat-list" style="display: flex; flex-wrap: wrap; gap: 10px;">
+            <div id="cat-list" style="display: flex; flex-wrap: wrap; gap: 12px;">
                 <p style="color: var(--brand-purple); font-size: 0.9rem;">> 正在同步防区数据...</p>
             </div>
         </div>
@@ -86,35 +103,16 @@
                     <label>> 目标网址 (URL) [先填这个，然后点击右侧解析]:</label>
                     <div class="url-group">
                         <input type="url" id="node-url" required placeholder="例如：https://github.com">
-                        <button type="button" id="btn-parse" class="btn-parse"><i class="fa-solid fa-wand-magic-sparkles"></i> AI 解析</button>
+                        <button type="button" id="btn-parse" class="btn btn-parse"><i class="fa-solid fa-wand-magic-sparkles"></i> AI 解析</button>
                     </div>
                 </div>
                 <div class="grid-2">
-                    <div class="form-group">
-                        <label>> 网站名称 (Title):</label>
-                        <input type="text" id="node-title" required>
-                    </div>
-                    <div class="form-group">
-                        <label>> 描述摘要 (Description):</label>
-                        <input type="text" id="node-desc">
-                    </div>
-                    <div class="form-group">
-                        <label>> 高清图标/FA (Icon):</label>
-                        <input type="text" id="node-icon">
-                    </div>
-                    <div class="form-group">
-                        <label>> 分类归属 (Category):</label>
-                        <select id="node-category"></select>
-                    </div>
-                    <div class="form-group" style="grid-column: span 2;">
-                        <label>> 卡片光环颜色 (Color Theme):</label>
-                        <select id="node-theme">
-                            <option value="cyan">赛博青 (Cyan)</option>
-                            <option value="purple">霓虹紫 (Purple)</option>
-                        </select>
-                    </div>
+                    <div class="form-group"><label>> 网站名称 (Title):</label><input type="text" id="node-title" required></div>
+                    <div class="form-group"><label>> 描述摘要 (Description):</label><input type="text" id="node-desc"></div>
+                    <div class="form-group"><label>> 高清图标/FA代码 (Icon):</label><input type="text" id="node-icon"></div>
+                    <div class="form-group"><label>> 分类归属 (Category):</label><select id="node-category"></select></div>
                 </div>
-                <button type="submit" class="btn-submit">[ 确认注入数据 ]</button>
+                <button type="submit" class="btn btn-submit">[ 确认注入数据 ]</button>
             </form>
             <div id="status-msg"></div>
         </div>
@@ -127,63 +125,152 @@
         </div>
     </div>
 
-    <dialog id="edit-modal">
-        <h3 style="color: var(--brand-emerald); border-bottom: 1px solid var(--glass-border); padding-bottom: 10px; margin-top: 0;">> OVERRIDE: 修改节点配置</h3>
-        <form id="edit-node-form">
-            <input type="hidden" id="edit-id">
-            <div class="form-group"><label>网站名称</label><input type="text" id="edit-title" required></div>
-            <div class="form-group"><label>网址 URL</label><input type="url" id="edit-url" required></div>
-            <div class="form-group"><label>描述摘要</label><textarea id="edit-desc" rows="2"></textarea></div>
-            <div class="grid-2">
-                <div class="form-group"><label>图标链接/FA</label><input type="text" id="edit-icon"></div>
-                <div class="form-group"><label>分类</label><select id="edit-category"></select></div>
-            </div>
-            <div style="display: flex; gap: 10px; margin-top: 20px;">
-                <button type="button" onclick="document.getElementById('edit-modal').close()" class="btn-icon" style="flex: 1;">CANCEL</button>
-                <button type="submit" class="btn-icon btn-edit" style="flex: 1; font-weight: bold;">UPDATE</button>
-            </div>
-        </form>
-    </dialog>
+    <div id="sys-modal-root"></div>
 
     <script>
+        /* =========================================================
+           赛博模态框 UI 引擎 (彻底取代 alert, confirm, prompt)
+           ========================================================= */
+        const SysUI = {
+            createContainer(id) {
+                const existing = document.getElementById(id);
+                if(existing) existing.remove();
+                const overlay = document.createElement('div');
+                overlay.id = id;
+                overlay.className = 'cyber-overlay';
+                document.getElementById('sys-modal-root').appendChild(overlay);
+                return overlay;
+            },
+            close(overlay) {
+                overlay.classList.remove('active');
+                setTimeout(() => overlay.remove(), 250);
+            },
+            showPrompt(title, msg, defaultVal = '') {
+                return new Promise(resolve => {
+                    const overlay = this.createContainer('cyber-prompt');
+                    overlay.innerHTML = `
+                        <div class="cyber-modal">
+                            <div class="cyber-modal-title" style="color:var(--brand-cyan);"><i class="fa-solid fa-terminal"></i> ${title}</div>
+                            <div class="cyber-modal-msg">${msg}</div>
+                            <input type="text" id="prompt-input" value="${defaultVal}" style="margin-bottom: 20px;">
+                            <div class="cyber-modal-actions">
+                                <button class="btn-modal cancel" id="p-cancel">CANCEL</button>
+                                <button class="btn-modal confirm" id="p-ok">OVERRIDE</button>
+                            </div>
+                        </div>
+                    `;
+                    requestAnimationFrame(() => overlay.classList.add('active'));
+                    const input = overlay.querySelector('#prompt-input');
+                    input.focus();
+                    
+                    overlay.querySelector('#p-cancel').onclick = () => { this.close(overlay); resolve(null); };
+                    overlay.querySelector('#p-ok').onclick = () => { this.close(overlay); resolve(input.value); };
+                });
+            },
+            showConfirm(title, msg, isDanger = false) {
+                return new Promise(resolve => {
+                    const overlay = this.createContainer('cyber-confirm');
+                    const themeColor = isDanger ? 'var(--brand-red)' : 'var(--brand-emerald)';
+                    const btnClass = isDanger ? 'danger' : 'confirm';
+                    const icon = isDanger ? 'fa-triangle-exclamation' : 'fa-circle-question';
+                    
+                    overlay.innerHTML = `
+                        <div class="cyber-modal" style="border-color:${themeColor}">
+                            <div class="cyber-modal-title" style="color:${themeColor};"><i class="fa-solid ${icon}"></i> ${title}</div>
+                            <div class="cyber-modal-msg">${msg}</div>
+                            <div class="cyber-modal-actions">
+                                <button class="btn-modal cancel" id="c-cancel">CANCEL</button>
+                                <button class="btn-modal ${btnClass}" id="c-ok">CONFIRM</button>
+                            </div>
+                        </div>
+                    `;
+                    requestAnimationFrame(() => overlay.classList.add('active'));
+                    
+                    overlay.querySelector('#c-cancel').onclick = () => { this.close(overlay); resolve(false); };
+                    overlay.querySelector('#c-ok').onclick = () => { this.close(overlay); resolve(true); };
+                });
+            },
+            // 定制化的全息节点编辑模态框
+            showNodeEditor(node) {
+                return new Promise(resolve => {
+                    const overlay = this.createContainer('cyber-editor');
+                    // 生成分类下拉选项
+                    const catOptions = globalCategories.map(c => `<option value="${c.name}" ${c.name===node.category?'selected':''}>${c.name}</option>`).join('');
+                    
+                    overlay.innerHTML = `
+                        <div class="cyber-modal" style="max-width: 600px; border-color: var(--brand-emerald);">
+                            <div class="cyber-modal-title" style="color: var(--brand-emerald); border-bottom:1px solid var(--glass-border); padding-bottom:10px;"><i class="fa-solid fa-pen-ruler"></i> 深度编辑模式 / NODE_OVERRIDE</div>
+                            <form id="cyber-edit-form" style="margin-top: 15px;">
+                                <div class="form-group"><label>网站名称</label><input type="text" id="e-title" value="${node.title}" required></div>
+                                <div class="form-group"><label>网址 URL</label><input type="url" id="e-url" value="${node.url}" required></div>
+                                <div class="form-group"><label>描述摘要</label><textarea id="e-desc" rows="2">${node.description||''}</textarea></div>
+                                <div class="grid-2">
+                                    <div class="form-group"><label>图标链接/FA</label><input type="text" id="e-icon" value="${node.icon||''}"></div>
+                                    <div class="form-group"><label>分类</label><select id="e-category">${catOptions}</select></div>
+                                </div>
+                                <div class="cyber-modal-actions" style="margin-top: 10px;">
+                                    <button type="button" class="btn-modal cancel" id="e-cancel">CANCEL</button>
+                                    <button type="submit" class="btn-modal confirm" style="border-color:var(--brand-emerald); color:var(--brand-emerald);">UPDATE_NODE</button>
+                                </div>
+                            </form>
+                        </div>
+                    `;
+                    requestAnimationFrame(() => overlay.classList.add('active'));
+
+                    overlay.querySelector('#e-cancel').onclick = () => { this.close(overlay); resolve(null); };
+                    overlay.querySelector('#cyber-edit-form').onsubmit = (e) => {
+                        e.preventDefault();
+                        const updatedNode = {
+                            id: node.id,
+                            title: overlay.querySelector('#e-title').value,
+                            url: overlay.querySelector('#e-url').value,
+                            description: overlay.querySelector('#e-desc').value,
+                            icon: overlay.querySelector('#e-icon').value,
+                            category: overlay.querySelector('#e-category').value,
+                            color_theme: 'cyan' // 默认统一配色
+                        };
+                        this.close(overlay);
+                        resolve(updatedNode);
+                    };
+                });
+            }
+        };
+
+        /* =========================================================
+           核心业务逻辑层
+           ========================================================= */
         const statusMsg = document.getElementById('status-msg');
         let globalCategories = [];
+        let globalNodes = [];
 
-        // ==========================================
-        // 1. 系统初始化与数据同步
-        // ==========================================
+        // 1. 初始化拉取数据
         async function fetchSystemData() {
             try {
-                // 使用全新的 RESTful 接口拉取数据
                 const [catRes, nodeRes] = await Promise.all([fetch('/api/categories'), fetch('/api/nodes')]);
                 globalCategories = await catRes.json();
-                const nodes = await nodeRes.json();
-                
+                globalNodes = await nodeRes.json();
                 renderCategories();
-                renderNodes(nodes);
+                renderNodes(globalNodes);
             } catch (error) {
                 document.getElementById('cat-list').innerHTML = '<span style="color:#ff4757">> API 链路断开</span>';
-                document.getElementById('node-list-container').innerHTML = '<p style="color: #ff4757;">> 获取节点数据失败。请检查 /api/nodes 接口。</p>';
+                document.getElementById('node-list-container').innerHTML = '<p style="color: #ff4757;">> 获取节点失败。请检查 /api/nodes 接口。</p>';
             }
         }
 
-        // ==========================================
-        // 2. 分类管理 (Category CRUD)
-        // ==========================================
+        // 2. 分类管理 (支持修、删、增)
         function renderCategories() {
             const list = document.getElementById('cat-list');
-            const selects = [document.getElementById('node-category'), document.getElementById('edit-category')];
+            const nodeCatSelect = document.getElementById('node-category');
             
-            // 渲染类别标签
             list.innerHTML = globalCategories.map(c => `
-                <span style="background: rgba(176, 38, 255, 0.1); border: 1px solid var(--brand-purple); padding: 5px 10px; border-radius: 4px; font-size: 0.85rem;">
-                    ${c.name} <i class="fa-solid fa-xmark" style="margin-left: 5px; cursor: pointer; color: var(--brand-red);" onclick="deleteCategory(${c.id}, '${c.name}')"></i>
-                </span>
+                <div class="cat-tag">
+                    <span>${c.name}</span>
+                    <i class="fa-solid fa-pen edit" title="重命名" onclick="editCategory(${c.id}, '${c.name}')"></i>
+                    <i class="fa-solid fa-xmark del" title="销毁" onclick="deleteCategory(${c.id}, '${c.name}')"></i>
+                </div>
             `).join('');
 
-            // 更新下拉菜单
-            const optionsHtml = globalCategories.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
-            selects.forEach(sel => sel.innerHTML = optionsHtml || '<option value="Default">Default</option>');
+            nodeCatSelect.innerHTML = globalCategories.map(c => `<option value="${c.name}">${c.name}</option>`).join('') || '<option value="Default">Default</option>';
         }
 
         async function addCategory() {
@@ -194,15 +281,21 @@
             fetchSystemData();
         }
 
+        async function editCategory(id, oldName) {
+            const newName = await SysUI.showPrompt('类别重命名', `当前名称: [ ${oldName} ]<br>请输入新的类别名称:`, oldName);
+            if (!newName || newName === oldName) return;
+            await fetch('/api/categories', { method: 'PUT', body: JSON.stringify({ id, name: newName }) });
+            fetchSystemData();
+        }
+
         async function deleteCategory(id, name) {
-            if(!confirm(`> 销毁分类 [ ${name} ] ?`)) return;
+            const confirm = await SysUI.showConfirm('危险操作', `确定要彻底销毁防区 [ ${name} ] 吗？<br>该分类下的节点将被悬空。`, true);
+            if (!confirm) return;
             await fetch('/api/categories', { method: 'DELETE', body: JSON.stringify({ id }) });
             fetchSystemData();
         }
 
-        // ==========================================
-        // 3. 节点管理 (Node CRUD)
-        // ==========================================
+        // 3. 节点管理 (图裂修复 & 独立编辑)
         function renderNodes(links) {
             const container = document.getElementById('node-list-container');
             container.innerHTML = ''; 
@@ -211,66 +304,51 @@
                 return;
             }
             links.forEach(link => {
+                // 【核心修复】：加上了 onerror 兜底逻辑，图片一旦加载失败（图裂），立刻变身为 FontAwesome 备用图标！
                 const iconHtml = link.icon && link.icon.startsWith('http') 
-                    ? `<img src="${link.icon}" style="width:24px; height:24px; border-radius:4px; object-fit:contain;">` 
-                    : `<i class="${link.icon}"></i>`;
+                    ? `<img src="${link.icon}" style="width:26px; height:26px; border-radius:6px; object-fit:contain;" onerror="this.onerror=null; this.outerHTML='<i class=\\'fa-solid fa-link\\' style=\\'font-size:18px;\\'></i>'">` 
+                    : `<i class="${link.icon || 'fa-solid fa-link'}" style="font-size:18px;"></i>`;
 
                 container.innerHTML += `
                     <div class="node-item">
-                        <div class="node-info" style="display: flex; gap: 12px; align-items: center;">
-                            <div style="display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; background: rgba(0,242,254,0.1); border-radius: 6px; color: var(--brand-cyan);">
+                        <div class="node-info" style="display: flex; gap: 15px; align-items: center; min-width: 0;">
+                            <div style="flex-shrink:0; display: flex; align-items: center; justify-content: center; width: 42px; height: 42px; background: rgba(0,242,254,0.1); border-radius: 8px; color: var(--brand-cyan);">
                                 ${iconHtml}
                             </div>
-                            <div>
-                                <h4>${link.title} <span style="font-size:0.7rem; color:#888; border:1px solid #444; padding:2px 4px; border-radius:3px; margin-left:5px;">${link.category}</span></h4>
-                                <p>${link.url}</p>
+                            <div style="min-width: 0; overflow: hidden;">
+                                <h4 style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${link.title} <span style="font-size:0.7rem; color:#888; border:1px solid #444; padding:2px 6px; border-radius:4px; margin-left:6px; font-weight:normal;">${link.category}</span></h4>
+                                <p style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${link.url}</p>
                             </div>
                         </div>
-                        <div style="display: flex; gap: 8px;">
-                            <button class="btn-icon btn-edit" onclick="openEditModal(${encodeURIComponent(JSON.stringify(link))})"><i class="fa-solid fa-pen"></i></button>
-                            <button class="btn-icon btn-delete" onclick="deleteNode(${link.id}, '${link.title}')"><i class="fa-solid fa-trash"></i></button>
+                        <div class="action-btns" style="flex-shrink:0;">
+                            <button class="btn-icon edit" onclick="triggerNodeEdit(${link.id})"><i class="fa-solid fa-pen"></i></button>
+                            <button class="btn-icon del" onclick="triggerNodeDelete(${link.id}, '${link.title.replace(/'/g, "\\'")}')"><i class="fa-solid fa-trash"></i></button>
                         </div>
                     </div>
                 `;
             });
         }
 
-        async function deleteNode(id, title) {
-            if (!confirm(`警告：确定要永久销毁 [ ${title} ] 吗？`)) return;
+        async function triggerNodeDelete(id, title) {
+            const confirm = await SysUI.showConfirm('抹除节点', `警告：确定要永久销毁节点 [ ${title} ] 吗？此操作不可逆！`, true);
+            if (!confirm) return;
             await fetch('/api/nodes', { method: 'DELETE', body: JSON.stringify({ id }) });
             fetchSystemData();
         }
 
-        // 打开编辑弹窗
-        window.openEditModal = function(nodeStr) {
-            const node = JSON.parse(decodeURIComponent(nodeStr));
-            document.getElementById('edit-id').value = node.id;
-            document.getElementById('edit-title').value = node.title;
-            document.getElementById('edit-url').value = node.url;
-            document.getElementById('edit-desc').value = node.description;
-            document.getElementById('edit-icon').value = node.icon;
-            document.getElementById('edit-category').value = node.category;
-            document.getElementById('edit-modal').showModal();
+        // 彻底修复之前字符串传递报错的 BUG，直接用 ID 在内存中查找数据并交给弹窗处理
+        window.triggerNodeEdit = async function(id) {
+            const node = globalNodes.find(n => n.id === id);
+            if (!node) return;
+            
+            const updatedNode = await SysUI.showNodeEditor(node);
+            if (updatedNode) {
+                await fetch('/api/nodes', { method: 'PUT', body: JSON.stringify(updatedNode) });
+                fetchSystemData();
+            }
         };
 
-        // 提交修改
-        document.getElementById('edit-node-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const payload = {
-                id: document.getElementById('edit-id').value,
-                title: document.getElementById('edit-title').value,
-                url: document.getElementById('edit-url').value,
-                description: document.getElementById('edit-desc').value,
-                icon: document.getElementById('edit-icon').value,
-                category: document.getElementById('edit-category').value,
-                color_theme: 'cyan'
-            };
-            await fetch('/api/nodes', { method: 'PUT', body: JSON.stringify(payload) });
-            document.getElementById('edit-modal').close();
-            fetchSystemData();
-        });
-
-        // 提交新增
+        // 4. 新增节点注入
         document.getElementById('add-node-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             statusMsg.style.color = "var(--brand-cyan)"; statusMsg.innerText = "> 正在写入 D1 核心...";
@@ -280,26 +358,25 @@
                 description: document.getElementById('node-desc').value,
                 category: document.getElementById('node-category').value,
                 icon: document.getElementById('node-icon').value,
-                color_theme: document.getElementById('node-theme').value
+                color_theme: 'cyan' // 彻底废弃主题选择，强制统一
             };
             const response = await fetch('/api/nodes', { method: 'POST', body: JSON.stringify(payload) });
             if (response.ok) {
-                statusMsg.style.color = "#10b981"; statusMsg.innerText = "> [成功] 数据已注入。";
+                statusMsg.style.color = "#10b981"; statusMsg.innerText = "> [注入成功] 节点已同步至边缘网络。";
                 document.getElementById('add-node-form').reset();
+                setTimeout(() => { statusMsg.innerText = ""; }, 3000);
                 fetchSystemData(); 
             }
         });
 
-        // ==========================================
-        // 4. 靶向智能解析
-        // ==========================================
+        // 5. 智能解析靶向雷达
         document.getElementById('btn-parse').addEventListener('click', async () => {
             const urlInput = document.getElementById('node-url').value;
-            if (!urlInput) { statusMsg.style.color = "#ff4757"; statusMsg.innerText = "> 请先输入目标网址！"; return; }
+            if (!urlInput) { statusMsg.style.color = "#ff4757"; statusMsg.innerText = "> 请先输入目标网址 URL！"; return; }
 
             const parseBtn = document.getElementById('btn-parse');
             parseBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 解析中...'; parseBtn.disabled = true;
-            statusMsg.style.color = "var(--brand-purple)"; statusMsg.innerText = "> 正在召唤边缘节点与 AI 进行解析...";
+            statusMsg.style.color = "var(--brand-purple)"; statusMsg.innerText = "> 正在召唤 AI 进行边缘解析...";
 
             try {
                 const response = await fetch('/api/parse', { method: 'POST', body: JSON.stringify({ url: urlInput }) });
@@ -308,7 +385,7 @@
                     if (data.title) document.getElementById('node-title').value = data.title;
                     if (data.description) document.getElementById('node-desc').value = data.description;
                     if (data.icon) document.getElementById('node-icon').value = data.icon;
-                    statusMsg.style.color = "#10b981"; statusMsg.innerText = "> [渗透成功] 特征已自动填充！";
+                    statusMsg.style.color = "#10b981"; statusMsg.innerText = "> [解析完成] 特征已自动填充！";
                 }
             } catch (error) {
                 statusMsg.style.color = "#ff4757"; statusMsg.innerText = "> [系统异常] 边缘解析链路中断。";
