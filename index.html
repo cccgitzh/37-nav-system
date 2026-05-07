@@ -3,208 +3,390 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>37° Nav - 星际指挥中心</title>
+    <title>37° Nav | 遥测终端 4.0</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        :root {
-            --bg-dark: #030712;
-            --brand-cyan: #00f2fe; 
-            --brand-lime: #4facfe;
-            --brand-purple: #b026ff;
-            --text-main: #f3f4f6;
-            --text-muted: #9ca3af;
-            --glass-bg: rgba(255, 255, 255, 0.03);
-            --glass-border: rgba(255, 255, 255, 0.08);
-            --glass-hover: rgba(255, 255, 255, 0.08);
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        obsidian: '#030712',
+                        cyan: { 400: '#22d3ee' },
+                        emerald: { 500: '#10b981' },
+                        crimson: { 500: '#ef4444' },
+                        purple: { 500: '#b026ff' }
+                    },
+                    fontFamily: { mono: ['"JetBrains Mono"', 'monospace'] }
+                }
+            }
         }
+    </script>
 
+    <style>
+        /* 极客黑曜石美学：纯 CSS 量子网格，拒绝 WebGL 性能消耗 */
         body {
-            background-color: var(--bg-dark);
+            background-color: #030712;
             background-image: 
-                linear-gradient(rgba(0, 242, 254, 0.03) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(0, 242, 254, 0.03) 1px, transparent 1px),
-                radial-gradient(circle at 50% -20%, rgba(176, 38, 255, 0.15) 0%, transparent 50%),
-                radial-gradient(circle at 10% 90%, rgba(79, 70, 229, 0.08) 0%, transparent 60%),
-                radial-gradient(circle at 90% 10%, rgba(225, 29, 72, 0.05) 0%, transparent 40%);
-            background-size: 40px 40px, 40px 40px, 100% 100%, 100% 100%, 100% 100%;
-            background-position: center;
+                linear-gradient(rgba(34, 211, 238, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(34, 211, 238, 0.03) 1px, transparent 1px);
+            background-size: 30px 30px;
             background-attachment: fixed;
             
-            color: var(--text-main);
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            margin: 0;
-            padding: 0;
-            min-height: 100vh;
+            font-family: 'JetBrains Mono', monospace;
+            -webkit-font-smoothing: antialiased;
+            color: #ffffff;
+            margin-bottom: 40px; /* 避开 HUD 遮挡 */
         }
 
-        .container { max-width: 1200px; margin: 0 auto; padding: 40px 20px; }
-
-        .hero { padding: 40px 0 20px 0; text-align: center; }
-        .logo-container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            margin-bottom: 25px;
-        }
-        .nav-logo {
-            width: 100px;
-            height: 100px;
-            border-radius: 50%;
-            object-fit: cover;
-            box-shadow: 0 0 30px rgba(0, 242, 254, 0.4), 0 0 60px rgba(176, 38, 255, 0.2);
-            margin-bottom: 25px;
-            animation: hologramFloat 6s ease-in-out infinite;
-            border: 2px solid rgba(0, 242, 254, 0.2);
-        }
-        @keyframes hologramFloat {
-            0%, 100% { transform: translateY(0px) rotate(0deg); }
-            50% { transform: translateY(-15px) rotate(2deg); }
-        }
-
-        .hero h1 { font-size: 3.5rem; margin: 0 0 15px 0; letter-spacing: -1px; }
-        .hero h1 span.cyan { color: var(--brand-cyan); }
-        .hero p { color: var(--text-muted); font-size: 1.1rem; max-width: 600px; margin: 0 auto 30px auto; }
-        
-        .search-container { position: relative; max-width: 600px; margin: 0 auto 50px auto; }
-        .search-container i { position: absolute; left: 20px; top: 50%; transform: translateY(-50%); color: var(--brand-cyan); }
-        .search-input { 
-            width: 100%; padding: 16px 20px 16px 50px; 
-            background: rgba(0, 0, 0, 0.6); 
-            border: 1px solid var(--glass-border); 
-            border-radius: 30px; 
-            color: var(--text-main); 
-            font-size: 1rem; 
-            box-sizing: border-box; 
-            backdrop-filter: blur(15px);
-            transition: all 0.3s ease;
-        }
-        .search-input:focus { outline: none; border-color: var(--brand-cyan); box-shadow: 0 0 25px rgba(0, 242, 254, 0.2); }
-
-        .category-title { font-size: 1.5rem; margin-bottom: 25px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--glass-border); padding-bottom: 15px;}
-        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; margin-bottom: 60px; }
-        
-        .glass-card { 
-            background: var(--glass-bg); 
-            backdrop-filter: blur(12px); 
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
-            border: 1px solid var(--glass-border); 
-            border-radius: 12px; 
-            padding: 20px; 
-            text-decoration: none; 
-            display: flex; 
-            gap: 15px; 
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
+            border: 1px solid rgba(255, 255, 255, 0.05);
         }
-        .glass-card:hover { 
-            background: var(--glass-hover); 
-            transform: translateY(-5px); 
-            border-color: var(--brand-cyan); 
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); 
-        }
-        .icon-box { 
-            width: 48px; height: 48px; border-radius: 10px; 
-            display: flex; align-items: center; justify-content: center; 
-            font-size: 1.5rem; background: rgba(0, 242, 254, 0.1); 
-            color: var(--brand-cyan); flex-shrink: 0; 
-        }
-        .glass-card.purple:hover { border-color: var(--brand-purple); }
-        .glass-card.purple .icon-box { background: rgba(176, 38, 255, 0.1); color: var(--brand-purple); }
 
-        .card-content { flex: 1; overflow: hidden; }
-        .card-title { color: var(--text-main); font-size: 1.1rem; font-weight: 600; margin: 0 0 5px 0; }
-        .card-desc { color: var(--text-muted); font-size: 0.85rem; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        /* 纯实心高对比度渲染类 */
+        .solid-text-white { color: #ffffff !important; }
+        .solid-text-cyan { color: #22d3ee !important; }
+        .solid-text-emerald { color: #10b981 !important; }
+        .solid-text-crimson { color: #ef4444 !important; }
+        .solid-text-gray { color: #9ca3af !important; }
         
-        .loading-text { color: var(--brand-cyan); font-family: 'Courier New', monospace; grid-column: 1 / -1; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #030712; }
+        ::-webkit-scrollbar-thumb { background: #22d3ee; border-radius: 3px; }
     </style>
 </head>
-<body>
-    <div class="container">
-        <div class="hero">
-            <div class="logo-container">
-                <img src="./logo.png" alt="37° Nav Logo" class="nav-logo">
-                <h1>37° <span class="cyan">Nav</span></h1>
+<body class="min-h-screen flex flex-col items-center p-6 pb-16">
+
+    <header class="w-full max-w-7xl mb-8 flex flex-col md:flex-row justify-between items-end gap-6 border-b border-[#22d3ee]/20 pb-6">
+        <div class="flex items-center gap-4">
+            <div class="w-16 h-16 rounded-full border-2 border-[#22d3ee]/30 shadow-[0_0_20px_rgba(34,211,238,0.2)] flex items-center justify-center overflow-hidden animate-[bounce_6s_infinite]">
+                <img src="./logo.png" alt="Logo" class="w-full h-full object-cover" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                <i class="fa-solid fa-cube text-2xl solid-text-cyan hidden"></i>
             </div>
-            <p>星际指挥中心：基于边缘计算与 AI 的语义导航链路</p>
-            
-            <div class="search-container">
-                <i class="fa-solid fa-robot"></i>
-                <input type="text" id="search-input" class="search-input" placeholder="输入需求，由 AI 检索最优节点...">
+            <div>
+                <h1 class="text-4xl font-extrabold solid-text-white tracking-tighter">
+                    37°<span class="solid-text-cyan ml-2">NAV_</span>
+                </h1>
+                <p class="text-xs solid-text-emerald mt-1">> SYS.READY // EDGE AI TELEMETRY ACTIVE</p>
             </div>
         </div>
 
-        <h2 class="category-title" id="grid-title"><i class="fa-solid fa-radar"></i> 节点阵列</h2>
-        <div class="grid" id="nav-grid">
-            <p class="loading-text">> 正在校准边缘节点数据...</p>
+        <button id="auth-btn" class="px-4 py-2 text-sm glass-panel solid-text-gray hover:solid-text-cyan border-l-2 border-transparent hover:border-[#22d3ee] transition-all">
+            <i class="fa-solid fa-lock mr-2"></i>SYS_OP LOGIN
+        </button>
+    </header>
+
+    <main class="w-full max-w-7xl flex flex-col gap-8">
+
+        <section class="glass-panel p-4 rounded-lg flex flex-col lg:flex-row gap-4">
+            
+            <form id="web-search-form" class="flex-1 flex gap-2">
+                <select id="engine-select" class="bg-[#030712] border border-[#22d3ee]/30 solid-text-cyan px-3 py-2 rounded text-sm focus:outline-none focus:border-[#22d3ee]">
+                    <option value="https://www.google.com/search?q=">Google</option>
+                    <option value="https://www.bing.com/search?q=">Bing</option>
+                    <option value="https://github.com/search?q=">GitHub</option>
+                </select>
+                <input type="text" id="web-search-input" placeholder="外网检索跃迁..." required
+                    class="flex-1 bg-[#030712] border border-[#22d3ee]/30 solid-text-white px-4 py-2 rounded text-sm focus:outline-none focus:border-[#22d3ee]">
+                <button type="submit" class="bg-[#22d3ee]/10 border border-[#22d3ee] solid-text-cyan px-4 py-2 rounded hover:bg-[#22d3ee] hover:text-[#030712] transition-colors">
+                    <i class="fa-solid fa-rocket"></i>
+                </button>
+            </form>
+
+            <div class="hidden lg:block w-px bg-[#22d3ee]/20"></div>
+
+            <div class="flex-1 relative">
+                <i class="fa-solid fa-robot absolute left-4 top-1/2 -translate-y-1/2 solid-text-cyan"></i>
+                <input type="text" id="ai-filter-input" placeholder="输入需求唤醒 AI 语义检索，或即时过滤节点..." 
+                    class="w-full bg-[#030712] border border-[#22d3ee]/30 solid-text-white pl-10 pr-4 py-2 rounded text-sm focus:outline-none focus:border-[#22d3ee]">
+            </div>
+        </section>
+
+        <section id="admin-panel" class="hidden glass-panel p-5 rounded-lg border-l-4 border-l-[#ef4444]">
+            <h2 class="text-sm font-bold solid-text-crimson mb-4">> OVERRIDE GRANTED: INJECT NEW NODE</h2>
+            <form id="add-node-form" class="flex flex-col gap-4">
+                
+                <div class="flex gap-2">
+                    <input type="url" id="node-url" placeholder="> 目标网址 (URL) [先填此项以激活渗透解析]" required class="flex-1 bg-[#030712] border border-white/20 solid-text-white px-3 py-2 text-sm focus:outline-none focus:border-[#ef4444]">
+                    <button type="button" id="btn-parse" class="bg-[#b026ff]/20 border border-[#b026ff] text-[#b026ff] px-4 py-2 hover:bg-[#b026ff] hover:text-white transition-colors text-sm font-bold whitespace-nowrap">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i> AI 靶向解析
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <input type="text" id="node-title" placeholder="网站名称 (自动填充)" required class="bg-[#030712] border border-white/20 solid-text-white px-3 py-2 text-sm focus:outline-none focus:border-[#ef4444]">
+                    <input type="text" id="node-desc" placeholder="AI 描述摘要 (自动填充)" class="md:col-span-2 bg-[#030712] border border-white/20 solid-text-white px-3 py-2 text-sm focus:outline-none focus:border-[#ef4444]">
+                    <input type="text" id="node-icon" placeholder="高清图标网址 (自动填充)" class="bg-[#030712] border border-white/20 solid-text-white px-3 py-2 text-sm focus:outline-none focus:border-[#ef4444]">
+                </div>
+
+                <div class="flex justify-between items-center mt-2">
+                    <p id="admin-status" class="text-xs solid-text-cyan">> 等待操作指令...</p>
+                    <button type="submit" class="bg-[#ef4444]/20 border border-[#ef4444] solid-text-crimson px-8 py-2 hover:bg-[#ef4444] hover:text-white transition-colors text-sm font-bold">
+                        [ 确认注入节点 ]
+                    </button>
+                </div>
+            </form>
+        </section>
+
+        <h2 id="grid-status-title" class="text-xl font-bold solid-text-white border-b border-[#22d3ee]/20 pb-2"><i class="fa-solid fa-radar solid-text-cyan mr-2"></i>全网节点阵列</h2>
+        <div id="node-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+            <p class="text-sm solid-text-cyan col-span-full">> 正在从 D1 核心同步边缘节点数据...</p>
         </div>
-    </div>
+
+    </main>
+
+    <footer class="fixed bottom-0 left-0 w-full h-10 bg-[#030712] border-t border-[#10b981]/30 flex items-center justify-between px-6 z-50 shadow-[0_-5px_20px_rgba(0,0,0,0.8)]">
+        <div class="flex items-center gap-3">
+            <i class="fa-solid fa-heart-pulse solid-text-emerald animate-pulse text-base"></i>
+            <span class="text-xs font-bold solid-text-emerald tracking-wider hidden sm:inline">TELEMETRY_LINK_ACTIVE</span>
+        </div>
+        <div id="hud-uptime" class="text-xs font-bold solid-text-cyan tracking-wider">
+            </div>
+    </footer>
 
     <script>
-        const grid = document.getElementById('nav-grid');
-        const gridTitle = document.getElementById('grid-title');
-        const searchInput = document.getElementById('search-input');
+        /* =======================================================================
+         * 1. 核心状态总线
+         * ======================================================================= */
+        let globalNodes = []; // 存储从 D1 拉取的全量数据
+        let isAdmin = sessionStorage.getItem('sys_op_token') === 'AUTHORIZED';
         
-        function renderCards(links) {
-            grid.innerHTML = ''; 
-            if (links.length === 0) {
-                grid.innerHTML = '<p class="loading-text" style="color: var(--text-muted);">> AI 未能匹配到相关坐标。</p>';
+        const gridEl = document.getElementById('node-grid');
+        const gridTitle = document.getElementById('grid-status-title');
+        const adminStatus = document.getElementById('admin-status');
+
+        /* =======================================================================
+         * 2. D1 数据库交互层
+         * ======================================================================= */
+        // 加载全部节点
+        async function loadAllLinks() {
+            try {
+                const response = await fetch('/api/links');
+                globalNodes = await response.json();
+                renderNodes(globalNodes);
+            } catch (error) {
+                gridEl.innerHTML = '<p class="solid-text-crimson">> [错误] 无法连接到 D1 数据库链路。</p>';
+            }
+        }
+
+        // 销毁节点 (联动 API)
+        window.deleteNode = async function(e, id, title) {
+            e.preventDefault(); 
+            if(!confirm(`> 警告：是否永久销毁 [ ${title} ] 节点？`)) return;
+
+            try {
+                const response = await fetch('/api/delete', {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id: id })
+                });
+                if (response.ok) {
+                    loadAllLinks(); // 重新拉取渲染
+                }
+            } catch (error) {
+                alert('> 连接错误。');
+            }
+        };
+
+        /* =======================================================================
+         * 3. 防挤压卡片渲染引擎 (核心布局层)
+         * ======================================================================= */
+        function renderNodes(nodesToRender) {
+            gridEl.innerHTML = '';
+            if (nodesToRender.length === 0) {
+                gridEl.innerHTML = '<p class="solid-text-gray">> 区域内未探测到有效节点。</p>';
                 return;
             }
-            links.forEach(link => {
-                const isPurple = link.color_theme === 'purple' ? 'purple' : '';
-                
-                // 兼容性渲染逻辑：判断是网址图还是 FA 图标
-                const iconHtml = link.icon.startsWith('http') 
-                    ? `<img src="${link.icon}" alt="logo" style="width: 32px; height: 32px; border-radius: 8px; object-fit: contain; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));">`
-                    : `<i class="${link.icon}"></i>`;
 
-                const cardHtml = `
-                    <a href="${link.url}" target="_blank" class="glass-card ${isPurple}">
-                        <div class="icon-box">${iconHtml}</div>
-                        <div class="card-content">
-                            <h3 class="card-title">${link.title}</h3>
-                            <p class="card-desc">${link.description}</p>
-                        </div>
-                    </a>
+            nodesToRender.forEach(link => {
+                const card = document.createElement('a');
+                card.href = link.url;
+                card.target = '_blank';
+                // 严苛防挤压：w-full min-w-0 overflow-hidden 缺一不可
+                card.className = `relative glass-panel rounded-lg border-l-4 border-l-[#22d3ee] p-4 flex items-center gap-4 hover:bg-white/5 hover:-translate-y-1 transition-all group w-full min-w-0 overflow-hidden block`;
+                
+                // 高清图标/FA图标智能识别 (保留了上个版本的极客重构)
+                const iconPreview = link.icon && link.icon.startsWith('http')
+                    ? `<img src="${link.icon}" alt="icon" class="w-8 h-8 rounded-md object-contain filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]">`
+                    : `<i class="${link.icon || 'fa-solid fa-link'} text-xl"></i>`;
+
+                // 权限编辑态
+                const adminHtml = isAdmin ? `
+                    <div class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                        <button onclick="deleteNode(event, ${link.id}, '${link.title}')" class="text-xs solid-text-crimson hover:text-white bg-[#030712] px-2 py-1 rounded shadow"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                ` : '';
+
+                // flex-shrink-0 保护图标不被压缩，truncate 保证文字溢出显示省略号
+                card.innerHTML = `
+                    ${adminHtml}
+                    <div class="flex-shrink-0 w-12 h-12 bg-[#22d3ee]/10 rounded-lg flex items-center justify-center solid-text-cyan shadow-inner">
+                        ${iconPreview}
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <h3 class="text-base font-bold solid-text-white truncate">${link.title}</h3>
+                        <p class="text-xs solid-text-gray truncate mt-1 leading-relaxed">${link.description || '暂无数据'}</p>
+                    </div>
                 `;
-                grid.innerHTML += cardHtml;
+                gridEl.appendChild(card);
             });
         }
 
-        async function loadAllLinks() {
-            try {
-                gridTitle.innerHTML = '<i class="fa-solid fa-radar"></i> 节点阵列';
-                const response = await fetch('/api/links');
-                const links = await response.json();
-                renderCards(links);
-            } catch (error) {
-                grid.innerHTML = '<p class="loading-text" style="color: #ff4757;">> [错误] 链路同步中断。</p>';
-            }
-        }
-
-        async function searchLinks(query) {
-            try {
-                grid.innerHTML = '<p class="loading-text" style="color: var(--brand-purple);">> 正在调用 AI 神经元进行语义检索...</p>';
-                gridTitle.innerHTML = '<i class="fa-solid fa-bolt"></i> AI 匹配结果';
-                const response = await fetch('/api/search?q=' + encodeURIComponent(query));
-                const links = await response.json();
-                renderCards(links);
-            } catch (error) {
-                grid.innerHTML = '<p class="loading-text" style="color: #ff4757;">> [错误] AI 脑机接口异常。</p>';
-            }
-        }
-
-        let timeout = null;
-        searchInput.addEventListener('input', (e) => {
-            clearTimeout(timeout);
+        /* =======================================================================
+         * 4. AI 语义检索与本地过滤 (双路架构)
+         * ======================================================================= */
+        let aiTimeout = null;
+        document.getElementById('ai-filter-input').addEventListener('input', (e) => {
+            clearTimeout(aiTimeout);
             const query = e.target.value.trim();
+            
             if (query.length === 0) {
-                loadAllLinks();
+                gridTitle.innerHTML = '<i class="fa-solid fa-radar solid-text-cyan mr-2"></i>全网节点阵列';
+                renderNodes(globalNodes);
                 return;
             }
-            timeout = setTimeout(() => searchLinks(query), 500);
+
+            // 1. 毫秒级本地过滤 (立刻让符合特征的本地卡片留下来)
+            const localFiltered = globalNodes.filter(node => 
+                node.title.toLowerCase().includes(query.toLowerCase()) || 
+                (node.description && node.description.toLowerCase().includes(query.toLowerCase()))
+            );
+            renderNodes(localFiltered);
+
+            // 2. 延迟 800ms 唤醒大模型语义检索 (避免浪费 AI 算力)
+            aiTimeout = setTimeout(async () => {
+                gridTitle.innerHTML = '<i class="fa-solid fa-bolt solid-text-purple mr-2"></i>AI 脑机接口检索结果';
+                try {
+                    const response = await fetch('/api/search?q=' + encodeURIComponent(query));
+                    const aiNodes = await response.json();
+                    renderNodes(aiNodes);
+                } catch(e) {}
+            }, 800);
         });
 
-        window.onload = loadAllLinks;
+        /* =======================================================================
+         * 5. 权限与管理面板系统 (融合控制台)
+         * ======================================================================= */
+        const authBtn = document.getElementById('auth-btn');
+        const adminPanel = document.getElementById('admin-panel');
+
+        function updateAdminUI() {
+            if (isAdmin) {
+                authBtn.innerHTML = '<i class="fa-solid fa-unlock mr-2"></i>SYS_OP LOGOUT';
+                authBtn.classList.add('border-[#ef4444]', 'solid-text-crimson');
+                adminPanel.classList.remove('hidden');
+            } else {
+                authBtn.innerHTML = '<i class="fa-solid fa-lock mr-2"></i>SYS_OP LOGIN';
+                authBtn.classList.remove('border-[#ef4444]', 'solid-text-crimson');
+                adminPanel.classList.add('hidden');
+            }
+            renderNodes(globalNodes); // 重新渲染以显示/隐藏垃圾桶图标
+        }
+
+        authBtn.addEventListener('click', () => {
+            if (isAdmin) {
+                sessionStorage.removeItem('sys_op_token');
+                isAdmin = false;
+            } else {
+                // 极简密码锁，建议改为复杂密码。这里主要防君子，真防盗还需 CF Access
+                if (prompt('> AUTHENTICATION REQUIRED:') === 'root') { 
+                    sessionStorage.setItem('sys_op_token', 'AUTHORIZED');
+                    isAdmin = true;
+                } else {
+                    alert('> ACCESS DENIED');
+                }
+            }
+            updateAdminUI();
+        });
+
+        // 智能靶向抓取 API 对接
+        document.getElementById('btn-parse').addEventListener('click', async () => {
+            const urlInput = document.getElementById('node-url').value;
+            if (!urlInput) { adminStatus.innerText = "> [警告] 请先输入目标网址！"; adminStatus.className = "text-xs solid-text-crimson"; return; }
+
+            adminStatus.innerText = "> 正在召唤边缘节点，执行深度渗透解析...";
+            adminStatus.className = "text-xs solid-text-purple";
+            
+            try {
+                const response = await fetch('/api/parse', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url: urlInput }) });
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.title) document.getElementById('node-title').value = data.title;
+                    if (data.description) document.getElementById('node-desc').value = data.description;
+                    if (data.icon) document.getElementById('node-icon').value = data.icon;
+                    adminStatus.innerText = "> [渗透成功] 特征已提取，请确认注入。";
+                    adminStatus.className = "text-xs solid-text-emerald";
+                }
+            } catch (error) {
+                adminStatus.innerText = "> [系统异常] 解析链路中断。";
+                adminStatus.className = "text-xs solid-text-crimson";
+            }
+        });
+
+        // 提交节点入库 API 对接
+        document.getElementById('add-node-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            adminStatus.innerText = "> 正在连接 D1 核心，写入数据...";
+            
+            const payload = {
+                title: document.getElementById('node-title').value,
+                url: document.getElementById('node-url').value,
+                description: document.getElementById('node-desc').value,
+                icon: document.getElementById('node-icon').value,
+                category: '核心服务', // 极简面板默认分类
+                color_theme: 'cyan'
+            };
+            
+            try {
+                const response = await fetch('/api/add', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                if (response.ok) {
+                    adminStatus.innerText = "> [成功] 数据已注入全网阵列。";
+                    adminStatus.className = "text-xs solid-text-emerald";
+                    document.getElementById('add-node-form').reset();
+                    loadAllLinks(); // 刷新列表
+                }
+            } catch (error) {
+                adminStatus.innerText = "> [错误] 数据写入被拒绝。";
+                adminStatus.className = "text-xs solid-text-crimson";
+            }
+        });
+
+        /* =======================================================================
+         * 6. 多引擎跃迁 & HUD 时钟逻辑
+         * ======================================================================= */
+        document.getElementById('web-search-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const engineUrl = document.getElementById('engine-select').value;
+            const query = document.getElementById('web-search-input').value;
+            window.open(engineUrl + encodeURIComponent(query), '_blank');
+        });
+
+        const genesisTime = new Date('2024-01-01T00:00:00Z').getTime();
+        const uptimeEl = document.getElementById('hud-uptime');
+
+        function updateUptime() {
+            const diff = new Date().getTime() - genesisTime;
+            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            const secs = Math.floor((diff % (1000 * 60)) / 1000);
+            uptimeEl.textContent = `系统存活 ${days}天 ${hours}小时 ${mins}分 ${secs}秒`;
+        }
+
+        // 初始化全站
+        setInterval(updateUptime, 1000);
+        updateUptime();
+        updateAdminUI();
+        loadAllLinks();
+
     </script>
 </body>
 </html>
