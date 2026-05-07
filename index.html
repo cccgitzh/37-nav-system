@@ -31,15 +31,10 @@
         html { scroll-behavior: smooth; }
         body {
             background-color: #282A36;
-            background-image: 
-                linear-gradient(rgba(139, 233, 253, 0.02) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(139, 233, 253, 0.02) 1px, transparent 1px);
-            background-size: 30px 30px;
-            background-attachment: fixed;
-            font-family: 'JetBrains Mono', monospace;
-            -webkit-font-smoothing: antialiased;
-            color: #F8F8F2;
-            margin-bottom: 50px;
+            background-image: linear-gradient(rgba(139, 233, 253, 0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(139, 233, 253, 0.02) 1px, transparent 1px);
+            background-size: 30px 30px; background-attachment: fixed;
+            font-family: 'JetBrains Mono', monospace; -webkit-font-smoothing: antialiased;
+            color: #F8F8F2; margin-bottom: 50px;
         }
 
         .no-scrollbar::-webkit-scrollbar { display: none; }
@@ -49,24 +44,11 @@
         ::-webkit-scrollbar-thumb { background: #6272A4; border-radius: 3px; }
         ::-webkit-scrollbar-thumb:hover { background: #BD93F9; }
 
-        /* =====================================
-           动态色彩卡片引擎 (Dynamic Aura)
-           ===================================== */
-        .node-card {
-            border-color: rgba(255, 255, 255, 0.05);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        .node-card:hover {
-            border-color: var(--card-color);
-            box-shadow: 0 5px 25px -5px var(--card-color);
-            transform: translateY(-2px);
-        }
-        .node-card:hover .node-title {
-            color: var(--card-color);
-        }
-        .node-icon-box {
-            color: var(--card-color);
-        }
+        /* 移除阴影的动态卡片引擎 */
+        .node-card { border: 1px solid rgba(255, 255, 255, 0.05); transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .node-card:hover { border-color: var(--card-color); transform: translateY(-2px); }
+        .node-card:hover .node-title { color: var(--card-color); }
+        .node-icon-box { color: var(--card-color); transition: all 0.3s ease; }
 
         /* 模态框系统 */
         .cyber-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8); backdrop-filter: blur(5px); display: flex; align-items: center; justify-content: center; z-index: 9999; opacity: 0; pointer-events: none; transition: opacity 0.2s ease; }
@@ -79,7 +61,7 @@
         .btn-modal.confirm { border-color: #BD93F9; color: #BD93F9; background: rgba(189, 147, 249, 0.1); }
         .btn-modal.confirm:hover { background: #BD93F9; color: #282A36; }
         .cyber-input { width: 100%; padding: 12px; background: #1E1F29; border: 1px solid #44475A; color: #F8F8F2; border-radius: 6px; box-sizing: border-box; margin-bottom: 20px; outline: none; transition: border-color 0.2s;}
-        .cyber-input:focus { border-color: #8BE9FD; box-shadow: 0 0 10px rgba(139, 233, 253, 0.1); }
+        .cyber-input:focus { border-color: #8BE9FD; }
     </style>
 </head>
 <body class="min-h-screen flex flex-col items-center pb-16 relative">
@@ -103,13 +85,15 @@
 
             <div class="flex items-center gap-3 flex-shrink-0">
                 
-                <div class="hidden lg:flex items-center bg-dracula-dark/80 border border-dracula-current rounded-lg p-1 transition-colors focus-within:border-dracula-purple focus-within:bg-dracula-dark shadow-inner">
-                    <form id="web-search-form" class="flex items-center pl-1 pr-1 border-r border-dracula-comment/40">
-                        <button type="button" id="engine-toggle-btn" class="text-dracula-comment hover:text-dracula-cyan text-sm outline-none px-2 transition-colors">
-                            <i id="engine-icon" class="fa-brands fa-google"></i>
-                        </button>
-                        <input type="text" id="web-search-input" placeholder="Search..." required class="bg-transparent text-dracula-fg text-sm outline-none px-1 w-20 focus:w-32 transition-all placeholder-dracula-comment">
-                        <button type="submit" class="text-dracula-comment hover:text-dracula-pink pr-2"><i class="fa-solid fa-arrow-right-to-bracket"></i></button>
+                <div class="hidden lg:flex items-center bg-dracula-dark/80 border border-dracula-current rounded-lg p-1 transition-colors focus-within:border-dracula-purple focus-within:bg-dracula-dark">
+                    <form id="web-search-form" class="flex items-center pl-2 pr-1 border-r border-dracula-comment/40">
+                        <select id="engine-select" class="bg-transparent text-dracula-comment hover:text-dracula-cyan text-sm font-bold outline-none cursor-pointer pr-1 appearance-none transition-colors">
+                            <option value="https://www.google.com/search?q=">G</option>
+                            <option value="https://www.bing.com/search?q=">B</option>
+                            <option value="https://github.com/search?q=">Hub</option>
+                        </select>
+                        <input type="text" id="web-search-input" placeholder="Search..." required class="bg-transparent text-dracula-fg text-sm outline-none px-2 w-20 focus:w-32 transition-all placeholder-dracula-comment">
+                        <button type="submit" class="text-dracula-comment hover:text-dracula-pink pr-1 transition-colors"><i class="fa-solid fa-arrow-right-to-bracket"></i></button>
                     </form>
                     
                     <div class="flex items-center pl-2 pr-1 relative">
@@ -122,7 +106,7 @@
                 <a href="/admin.html" id="admin-link" target="_blank" class="hidden text-sm text-dracula-comment hover:text-dracula-cyan font-bold transition-colors border border-transparent hover:border-dracula-cyan/30 px-2 py-1 rounded">
                     <i class="fa-solid fa-server mr-1"></i>Console
                 </a>
-                <button id="auth-btn" class="text-sm bg-dracula-purple hover:bg-dracula-pink text-dracula-dark font-bold px-3 py-1.5 rounded-lg transition-colors shadow-lg flex items-center gap-1.5">
+                <button id="auth-btn" class="text-sm bg-dracula-purple hover:bg-dracula-pink text-dracula-dark font-bold px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5">
                     <i class="fa-solid fa-lock"></i><span class="hidden sm:inline">SYS_OP</span>
                 </button>
             </div>
@@ -133,7 +117,7 @@
         <div id="dynamic-zones" class="flex flex-col gap-12"></div>
     </main>
 
-    <footer class="fixed bottom-0 left-0 w-full h-10 bg-dracula-dark border-t border-dracula-current flex items-center justify-center px-6 z-40 shadow-[0_-5px_20px_rgba(0,0,0,0.5)]">
+    <footer class="fixed bottom-0 left-0 w-full h-10 bg-dracula-dark border-t border-dracula-current flex items-center justify-center px-6 z-40">
         <div class="flex items-center gap-2">
             <i class="fa-solid fa-heart-pulse text-dracula-red animate-pulse text-base drop-shadow-[0_0_8px_rgba(255,85,85,0.8)]"></i>
             <span id="hud-uptime" class="text-xs font-bold text-dracula-comment tracking-widest"></span>
@@ -143,9 +127,6 @@
     <div id="sys-modal-root"></div>
 
     <script>
-        /* =========================================================
-           赛博模态框 UI 引擎
-           ========================================================= */
         const SysUI = {
             createContainer(id) {
                 const existing = document.getElementById(id);
@@ -185,16 +166,11 @@
             }
         };
 
-        /* =========================================================
-           系统核心逻辑 & 动态色彩提取引擎
-           ========================================================= */
         let globalCategories = [];
         let globalNodes = [];
         let isAdmin = sessionStorage.getItem('sys_op_token') === 'AUTHORIZED';
         const dynamicZones = document.getElementById('dynamic-zones');
         const navCatContainer = document.getElementById('nav-categories');
-        
-        // Dracula 专属荧光随机色库 (当图片无法读取时的备用色)
         const draculaColors = ['#8BE9FD', '#50FA7B', '#FF79C6', '#BD93F9', '#FF5555', '#F1FA8C', '#FFB86C'];
 
         async function fetchSystemData() {
@@ -222,7 +198,8 @@
             if (isAiSearch) {
                 if (nodes.length === 0) return dynamicZones.innerHTML = '<p class="text-dracula-comment">> 神经元未匹配到相关结果。</p>';
                 const zone = document.createElement('div');
-                zone.innerHTML = `<div class="flex items-center gap-3 mb-6"><h2 class="text-2xl font-bold text-dracula-pink">AI 检索结果</h2><div class="h-px bg-dracula-pink/30 flex-grow"></div></div>`;
+                // 【优化】渐变分割线
+                zone.innerHTML = `<div class="flex items-center gap-4 mb-6"><h2 class="text-2xl font-bold text-dracula-pink tracking-wide">AI 检索结果</h2><div class="h-[1px] bg-gradient-to-r from-dracula-pink/50 to-transparent flex-grow"></div></div>`;
                 zone.appendChild(buildGrid(nodes));
                 dynamicZones.appendChild(zone);
                 return;
@@ -242,13 +219,13 @@
                 const zone = document.createElement('div');
                 zone.id = `cat-${catName.replace(/\s+/g, '-')}`;
                 zone.className = "scroll-mt-24"; 
-                zone.innerHTML = `<div class="flex items-center gap-3 mb-6"><h2 class="text-xl font-bold text-dracula-cyan">${catName}</h2><div class="h-px bg-dracula-current flex-grow"></div></div>`;
+                // 【优化】发光渐变分割线
+                zone.innerHTML = `<div class="flex items-center gap-4 mb-6"><h2 class="text-xl font-bold text-dracula-cyan tracking-wider">${catName}</h2><div class="h-[1px] bg-gradient-to-r from-dracula-cyan/50 to-transparent flex-grow"></div></div>`;
                 zone.appendChild(buildGrid(catNodes));
                 dynamicZones.appendChild(zone);
             }
         }
 
-        // 核心网格生成与「千站千面」光影计算
         function buildGrid(nodesArray) {
             const grid = document.createElement('div');
             grid.className = 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6';
@@ -257,58 +234,49 @@
                 const card = document.createElement('a');
                 card.href = link.url; card.target = '_blank';
                 
-                // 默认注入随机发光色
                 const randomHex = draculaColors[Math.floor(Math.random() * draculaColors.length)];
                 card.style.setProperty('--card-color', randomHex);
-                card.className = `node-card relative bg-dracula-current/30 hover:bg-dracula-current/60 backdrop-blur-md rounded-xl p-4 flex items-center gap-4 group w-full min-w-0 overflow-hidden block border`;
+                // 【优化】移除了 shadow 相关的 class
+                card.className = `node-card relative bg-dracula-current/30 hover:bg-dracula-current/60 backdrop-blur-md rounded-xl p-4 flex items-center gap-4 group w-full min-w-0 overflow-hidden block`;
                 
                 let iconHTML = '';
                 if (link.icon && link.icon.startsWith('http')) {
-                    // 显示层：正常的图片加载
                     iconHTML = `
                         <div class="relative w-10 h-10 flex items-center justify-center">
                             <img src="${link.icon}" loading="lazy" alt="icon" class="w-full h-full rounded object-contain filter drop-shadow-md group-hover:scale-110 transition-transform duration-300" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
                             <i class="fa-solid fa-link node-icon-box text-xl hidden group-hover:scale-110 transition-transform duration-300"></i>
                         </div>`;
 
-                    // 分析层：幽灵图像加载用于提取主色调
                     const hiddenImg = new Image();
-                    hiddenImg.crossOrigin = "Anonymous"; // 尝试跨域读取
+                    hiddenImg.crossOrigin = "Anonymous";
                     hiddenImg.onload = () => {
                         const canvas = document.createElement('canvas');
                         const ctx = canvas.getContext('2d');
-                        canvas.width = hiddenImg.width || 32;
-                        canvas.height = hiddenImg.height || 32;
+                        canvas.width = hiddenImg.width || 32; canvas.height = hiddenImg.height || 32;
                         ctx.drawImage(hiddenImg, 0, 0, canvas.width, canvas.height);
                         try {
                             const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
                             let r=0, g=0, b=0, count=0;
                             for(let i=0; i<data.length; i+=4){
-                                if(data[i+3] < 128) continue; // 剔除透明像素
-                                if(data[i]>240 && data[i+1]>240 && data[i+2]>240) continue; // 剔除纯白
-                                if(data[i]<15 && data[i+1]<15 && data[i+2]<15) continue; // 剔除纯黑
+                                if(data[i+3] < 128 || (data[i]>240 && data[i+1]>240 && data[i+2]>240) || (data[i]<15 && data[i+1]<15 && data[i+2]<15)) continue;
                                 r += data[i]; g += data[i+1]; b += data[i+2]; count++;
                             }
-                            if(count > 0) {
-                                // 提取成功，动态覆盖该卡片的 CSS 变量
-                                card.style.setProperty('--card-color', `rgb(${Math.floor(r/count)},${Math.floor(g/count)},${Math.floor(b/count)})`);
-                            }
-                        } catch(e) {} // 如遇防盗链 CORS 拦截，静默失败，保留随机色
+                            if(count > 0) card.style.setProperty('--card-color', `rgb(${Math.floor(r/count)},${Math.floor(g/count)},${Math.floor(b/count)})`);
+                        } catch(e) {}
                     };
                     hiddenImg.src = link.icon;
                 } else {
-                    // 非 HTTP 图片直接渲染 FontAwesome，使用默认/随机发光色
                     iconHTML = `<div class="w-10 h-10 flex items-center justify-center"><i class="${link.icon || 'fa-solid fa-link'} node-icon-box text-xl group-hover:scale-110 transition-transform duration-300"></i></div>`;
                 }
 
                 const adminHtml = isAdmin ? `
                     <div class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                        <button onclick="deleteNode(event, ${link.id}, '${link.title.replace(/'/g, "\\'")}')" class="text-xs text-dracula-red hover:text-white bg-dracula-dark border border-dracula-red/30 hover:bg-dracula-red px-2 py-1 rounded shadow transition-colors"><i class="fa-solid fa-trash"></i></button>
+                        <button onclick="deleteNode(event, ${link.id}, '${link.title.replace(/'/g, "\\'")}')" class="text-xs text-dracula-red hover:text-white bg-dracula-dark border border-dracula-red/30 hover:bg-dracula-red px-2 py-1 rounded transition-colors"><i class="fa-solid fa-trash"></i></button>
                     </div>` : '';
 
                 card.innerHTML = `
                     ${adminHtml}
-                    <div class="flex-shrink-0 w-12 h-12 bg-dracula-bg rounded-lg flex items-center justify-center border border-dracula-current shadow-inner">
+                    <div class="flex-shrink-0 w-12 h-12 bg-dracula-bg rounded-lg flex items-center justify-center border border-dracula-current">
                         ${iconHTML}
                     </div>
                     <div class="flex-1 min-w-0">
@@ -321,29 +289,24 @@
             return grid;
         }
 
-        // =====================================
-        // 系统鉴权与业务
-        // =====================================
         function updateAdminUI() {
             const authBtn = document.getElementById('auth-btn');
             const adminLink = document.getElementById('admin-link');
-            
             if (isAdmin) {
                 authBtn.innerHTML = '<i class="fa-solid fa-unlock"></i><span class="hidden sm:inline ml-1.5">LOGOUT</span>';
-                authBtn.className = "text-sm bg-dracula-red hover:bg-[#ff7373] text-dracula-dark font-bold px-3 py-1.5 rounded-lg transition-colors flex items-center shadow-lg shadow-dracula-red/20";
+                authBtn.className = "text-sm bg-dracula-red hover:bg-[#ff7373] text-dracula-dark font-bold px-3 py-1.5 rounded-lg transition-colors flex items-center shadow-lg";
                 adminLink.classList.remove('hidden'); 
             } else {
                 authBtn.innerHTML = '<i class="fa-solid fa-lock"></i><span class="hidden sm:inline ml-1.5">SYS_OP</span>';
-                authBtn.className = "text-sm bg-dracula-purple hover:bg-dracula-pink text-dracula-dark font-bold px-3 py-1.5 rounded-lg transition-colors flex items-center shadow-lg shadow-dracula-purple/20";
+                authBtn.className = "text-sm bg-dracula-purple hover:bg-dracula-pink text-dracula-dark font-bold px-3 py-1.5 rounded-lg transition-colors flex items-center shadow-lg";
                 adminLink.classList.add('hidden');
             }
             renderCategorizedNodes(globalNodes);
         }
 
         document.getElementById('auth-btn').addEventListener('click', async () => {
-            if (isAdmin) { 
-                sessionStorage.removeItem('sys_op_token'); isAdmin = false; 
-            } else { 
+            if (isAdmin) { sessionStorage.removeItem('sys_op_token'); isAdmin = false; } 
+            else { 
                 const pwd = await SysUI.showPrompt('SYS_AUTH', 'Enter Override Key:', 'password');
                 if (pwd === 'root') { sessionStorage.setItem('sys_op_token', 'AUTHORIZED'); isAdmin = true; } 
                 else if (pwd !== null) { await SysUI.showConfirm('Access Denied', 'Authentication failed.', true); }
@@ -361,29 +324,6 @@
             } catch (error) {}
         };
 
-        // =====================================
-        // 图标化多引擎搜索
-        // =====================================
-        const engines = [
-            { name: 'Google', url: 'https://www.google.com/search?q=', icon: 'fa-google' },
-            { name: 'Bing', url: 'https://www.bing.com/search?q=', icon: 'fa-microsoft' },
-            { name: 'GitHub', url: 'https://github.com/search?q=', icon: 'fa-github' }
-        ];
-        let currentEngineIdx = 0;
-        
-        document.getElementById('engine-toggle-btn').addEventListener('click', (e) => {
-            e.preventDefault();
-            currentEngineIdx = (currentEngineIdx + 1) % engines.length;
-            document.getElementById('engine-icon').className = `fa-brands ${engines[currentEngineIdx].icon}`;
-        });
-
-        document.getElementById('web-search-form').addEventListener('submit', (e) => {
-            e.preventDefault();
-            const query = document.getElementById('web-search-input').value;
-            window.open(engines[currentEngineIdx].url + encodeURIComponent(query), '_blank');
-        });
-
-        // 边缘 AI 检索
         let aiTimeout = null;
         document.getElementById('ai-filter-input').addEventListener('input', (e) => {
             clearTimeout(aiTimeout);
@@ -400,30 +340,24 @@
             }, 800);
         });
 
-        // =====================================
-        // 精准时钟引擎算法
-        // =====================================
-        const gTime = new Date('2024-01-01T00:00:00Z').getTime(); // 创世纪元
-        
+        document.getElementById('web-search-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            window.open(document.getElementById('engine-select').value + encodeURIComponent(document.getElementById('web-search-input').value), '_blank');
+        });
+
+        // 【优化】带前置 0 补齐的高精度时钟引擎
+        const gTime = new Date('2024-01-01T00:00:00Z').getTime();
         function updateUptime() {
             const diff = new Date().getTime() - gTime;
-            let days = Math.floor(diff / 86400000);
-            
-            const years = Math.floor(days / 365);
-            days %= 365;
-            const months = Math.floor(days / 30);
-            days %= 30; // 粗略计算剩余天数
-            
-            const hours = Math.floor((diff % 86400000) / 3600000);
-            const mins = Math.floor((diff % 3600000) / 60000);
-            const secs = Math.floor((diff % 60000) / 1000);
-            
-            document.getElementById('hud-uptime').innerHTML = 
-                `小破站苟且了 ${years}年/${months}月/${days}日/${hours}时/${mins}分/${secs}秒`;
+            const d = String(Math.floor(diff / 86400000)).padStart(2, '0');
+            const h = String(Math.floor((diff % 86400000) / 3600000)).padStart(2, '0');
+            const m = String(Math.floor((diff % 3600000) / 60000)).padStart(2, '0');
+            const s = String(Math.floor((diff % 60000) / 1000)).padStart(2, '0');
+            document.getElementById('hud-uptime').textContent = `小破站苟且了 ${d}天 ${h}时 ${m}分 ${s}秒`;
         }
-        
         setInterval(updateUptime, 1000);
         updateUptime();
+
         updateAdminUI();
         fetchSystemData();
     </script>
