@@ -1,5 +1,5 @@
 // functions/api/categories.js
-// 【升级】搭载主动预热 (Cache Warming) 与 ETag 短路引擎
+// 搭载主动强同步预热 (Strict Cache Warming) 与 ETag 短路引擎
 
 async function warmUpCatCache(env) {
     const { results } = await env.DB.prepare("SELECT * FROM categories ORDER BY sort_order ASC, id ASC").all();
@@ -32,7 +32,9 @@ export async function onRequestGet(context) {
 export async function onRequestPost(context) {
     const { name } = await context.request.json();
     await context.env.DB.prepare("INSERT INTO categories (name) VALUES (?)").bind(name).run();
-    context.waitUntil(warmUpCatCache(context.env));
+    
+    // 【核心修复】：强同步 await
+    await warmUpCatCache(context.env);
     return new Response(JSON.stringify({ success: true }));
 }
 
@@ -45,13 +47,17 @@ export async function onRequestPut(context) {
         const { id, name } = data;
         await context.env.DB.prepare("UPDATE categories SET name = ? WHERE id = ?").bind(name, id).run();
     }
-    context.waitUntil(warmUpCatCache(context.env));
+    
+    // 【核心修复】：强同步 await
+    await warmUpCatCache(context.env);
     return new Response(JSON.stringify({ success: true }));
 }
 
 export async function onRequestDelete(context) {
     const { id } = await context.request.json();
     await context.env.DB.prepare("DELETE FROM categories WHERE id = ?").bind(id).run();
-    context.waitUntil(warmUpCatCache(context.env));
+    
+    // 【核心修复】：强同步 await
+    await warmUpCatCache(context.env);
     return new Response(JSON.stringify({ success: true }));
 }

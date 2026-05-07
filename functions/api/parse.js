@@ -1,5 +1,5 @@
 /**
- * 37° Nav - 边缘智能靶向解析 API (Llama-3.1 强认知版)
+ * 37° Nav - 边缘智能靶向解析 API (Llama-3.1 + V2精准图标引擎)
  * 架构：Cloudflare Pages + HTMLRewriter + Workers AI
  */
 
@@ -29,12 +29,7 @@ export async function onRequest(context) {
         
         const targetUrlObj = new URL(targetUrl);
         let domain = targetUrlObj.hostname.replace(/^www\./, '');
-        
-        // 提取根域名 (例如 mail.google.com -> google.com)，用于应对大厂矩阵图标共享机制
-        const domainParts = domain.split('.');
-        const rootDomain = domainParts.length > 2 ? domainParts.slice(-2).join('.') : domain;
 
-        // 星图知识库短路
         const knownSites = {
             'github.com': { title: 'GitHub', icon: 'https://github.githubassets.com/favicons/favicon.svg', description: '全球最大的开源代码托管与版本控制中枢。' },
             'x.com': { title: 'X (Twitter)', icon: 'https://abs.twimg.com/favicons/twitter.3.ico', description: '全球实时资讯与社交互动网络。' },
@@ -61,7 +56,7 @@ export async function onRequest(context) {
             clearTimeout(timeoutId);
             return new Response(JSON.stringify({
                 title: domain.charAt(0).toUpperCase() + domain.slice(1),
-                icon: `https://www.google.com/s2/favicons?domain=${domain}&sz=128`, 
+                icon: `https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=${encodeURIComponent(targetUrl)}&size=128`, 
                 description: '⚠️ 目标星体响应超时或拒绝连接，强制熔断。'
             }), { headers: { 'Content-Type': 'application/json', ...corsHeaders } });
         }
@@ -97,18 +92,16 @@ export async function onRequest(context) {
         extracted.bodyText = extracted.bodyText.replace(/\s+/g, ' ').trim();
         const finalTitleRaw = (extracted.ogTitle || extracted.title).trim() || domain;
 
-        // 【大厂矩阵图标算法升级】
+        // 【核心修复：更换为更强大的 Google V2 接口，支持精准子域名和路径提取】
         let finalIcon = extracted.appleIcon || extracted.icon || extracted.shortcutIcon;
         if (finalIcon) {
             try {
                 finalIcon = new URL(finalIcon, targetUrl).href;
             } catch (e) {
-                // 回退到子域名图标嗅探
-                finalIcon = `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
+                finalIcon = `https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=${encodeURIComponent(targetUrl)}&size=128`;
             }
         } else {
-            // 如果连标签都没写，直接穿透到根域名去拉取公司主图标！
-            finalIcon = `https://www.google.com/s2/favicons?domain=${rootDomain}&sz=128`;
+            finalIcon = `https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=${encodeURIComponent(targetUrl)}&size=128`;
         }
 
         const wafKeywords = ['just a moment', 'attention required', '验证码', 'cloudflare', 'security check'];
@@ -124,7 +117,6 @@ export async function onRequest(context) {
         let aiResult = { title: finalTitleRaw, description: rawDesc.substring(0, 100) };
 
         try {
-            // 【重磅换代：采用 Llama-3.1-8B-Instruct 引擎 + 格式锁死 Prompt】
             const aiResponse = await env.AI.run('@cf/meta/llama-3.1-8b-instruct', { 
                 messages: [
                     { role: 'system', content: `你是一个精通网页元数据的网络极客。请分析用户提供的网页源码并提取核心信息。
@@ -137,7 +129,6 @@ export async function onRequest(context) {
                 ] 
             });
             
-            // 极致净化的 JSON 正则提取
             const jsonMatch = (aiResponse.response || '').match(/\{[\s\S]*\}/);
             if (jsonMatch) {
                 const parsed = JSON.parse(jsonMatch[0]);
@@ -145,7 +136,7 @@ export async function onRequest(context) {
                 if (parsed.description) aiResult.description = parsed.description;
             }
         } catch (e) {
-            console.error("AI 引擎异常或 JSON 解析失败:", e);
+            console.error("AI 引擎异常:", e);
         }
 
         return new Response(JSON.stringify({
