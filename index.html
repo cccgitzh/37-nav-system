@@ -7,8 +7,8 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
-            --bg-dark: #0f1115;
-            --brand-cyan: #00f2fe;
+            --bg-dark: #030712; /* Obsidian Black */
+            --brand-cyan: #00f2fe; 
             --brand-lime: #4facfe;
             --brand-purple: #b026ff;
             --text-main: #f3f4f6;
@@ -17,54 +17,129 @@
             --glass-border: rgba(255, 255, 255, 0.08);
             --glass-hover: rgba(255, 255, 255, 0.08);
         }
-        body { background-color: var(--bg-dark); color: var(--text-main); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 0; background-image: radial-gradient(circle at 50% -20%, #1e293b 0%, transparent 50%); min-height: 100vh; }
+
+        body {
+            background-color: var(--bg-dark);
+            /* 纯代码实现的深空量子网格星云背景 */
+            background-image: 
+                linear-gradient(rgba(0, 242, 254, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 242, 254, 0.03) 1px, transparent 1px),
+                radial-gradient(circle at 50% -20%, rgba(176, 38, 255, 0.15) 0%, transparent 50%),
+                radial-gradient(circle at 10% 90%, rgba(79, 70, 229, 0.08) 0%, transparent 60%),
+                radial-gradient(circle at 90% 10%, rgba(225, 29, 72, 0.05) 0%, transparent 40%);
+            background-size: 40px 40px, 40px 40px, 100% 100%, 100% 100%, 100% 100%;
+            background-position: center;
+            background-attachment: fixed;
+            
+            color: var(--text-main);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+        }
+
         .container { max-width: 1200px; margin: 0 auto; padding: 40px 20px; }
+
+        /* 3D LOGO 与全息悬浮视觉 */
         .hero { padding: 40px 0 20px 0; text-align: center; }
+        .logo-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 25px;
+        }
+        .nav-logo {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            object-fit: cover;
+            /* 霓虹 RGB 投影 */
+            box-shadow: 0 0 30px rgba(0, 242, 254, 0.4), 0 0 60px rgba(176, 38, 255, 0.2);
+            margin-bottom: 25px;
+            animation: hologramFloat 6s ease-in-out infinite;
+            border: 2px solid rgba(0, 242, 254, 0.2);
+        }
+        @keyframes hologramFloat {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-15px) rotate(2deg); }
+        }
+
         .hero h1 { font-size: 3.5rem; margin: 0 0 15px 0; letter-spacing: -1px; }
         .hero h1 span.cyan { color: var(--brand-cyan); }
-        .hero p { color: var(--text-muted); font-size: 1.1rem; max-width: 600px; margin: 0 auto 30px auto; line-height: 1.6; }
+        .hero p { color: var(--text-muted); font-size: 1.1rem; max-width: 600px; margin: 0 auto 30px auto; }
         
-        /* 酷炫搜索框样式 */
+        /* AI 搜索框 */
         .search-container { position: relative; max-width: 600px; margin: 0 auto 50px auto; }
-        .search-container i { position: absolute; left: 20px; top: 50%; transform: translateY(-50%); color: var(--brand-cyan); font-size: 1.2rem; }
-        .search-input { width: 100%; padding: 16px 20px 16px 50px; background: rgba(0, 0, 0, 0.5); border: 1px solid var(--glass-border); border-radius: 30px; color: var(--text-main); font-size: 1rem; box-sizing: border-box; transition: all 0.3s ease; backdrop-filter: blur(10px); }
-        .search-input:focus { outline: none; border-color: var(--brand-cyan); box-shadow: 0 0 20px rgba(0, 242, 254, 0.15); }
-        .search-input::placeholder { color: #4b5563; }
+        .search-container i { position: absolute; left: 20px; top: 50%; transform: translateY(-50%); color: var(--brand-cyan); }
+        .search-input { 
+            width: 100%; padding: 16px 20px 16px 50px; 
+            background: rgba(0, 0, 0, 0.6); 
+            border: 1px solid var(--glass-border); 
+            border-radius: 30px; 
+            color: var(--text-main); 
+            font-size: 1rem; 
+            box-sizing: border-box; 
+            backdrop-filter: blur(15px);
+            transition: all 0.3s ease;
+        }
+        .search-input:focus { outline: none; border-color: var(--brand-cyan); box-shadow: 0 0 25px rgba(0, 242, 254, 0.2); }
 
+        /* 卡片布局 */
         .category-title { font-size: 1.5rem; margin-bottom: 25px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--glass-border); padding-bottom: 15px;}
-        .category-title i { font-size: 1.2rem; color: var(--brand-cyan); }
         .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; margin-bottom: 60px; }
         
-        /* 卡片样式 */
-        .glass-card { background: var(--glass-bg); backdrop-filter: blur(10px); border: 1px solid var(--glass-border); border-radius: 12px; padding: 20px; text-decoration: none; display: flex; align-items: flex-start; gap: 15px; transition: all 0.3s ease; cursor: pointer; }
-        .glass-card:hover { background: var(--glass-hover); transform: translateY(-3px); border-color: var(--brand-cyan); box-shadow: 0 10px 20px rgba(0, 242, 254, 0.05); }
-        .icon-box { width: 45px; height: 45px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; background: rgba(0, 242, 254, 0.1); color: var(--brand-cyan); flex-shrink: 0; }
-        .glass-card.purple:hover { border-color: var(--brand-purple); box-shadow: 0 10px 20px rgba(176, 38, 255, 0.05); }
+        .glass-card { 
+            background: var(--glass-bg); 
+            backdrop-filter: blur(12px); 
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border); 
+            border-radius: 12px; 
+            padding: 20px; 
+            text-decoration: none; 
+            display: flex; 
+            gap: 15px; 
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
+        }
+        .glass-card:hover { 
+            background: var(--glass-hover); 
+            transform: translateY(-5px); 
+            border-color: var(--brand-cyan); 
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); 
+        }
+        .icon-box { 
+            width: 48px; height: 48px; border-radius: 10px; 
+            display: flex; align-items: center; justify-content: center; 
+            font-size: 1.5rem; background: rgba(0, 242, 254, 0.1); 
+            color: var(--brand-cyan); flex-shrink: 0; 
+        }
+        .glass-card.purple:hover { border-color: var(--brand-purple); }
         .glass-card.purple .icon-box { background: rgba(176, 38, 255, 0.1); color: var(--brand-purple); }
-        .card-content { flex: 1; }
-        .card-title { color: var(--text-main); font-size: 1.1rem; font-weight: 600; margin: 0 0 8px 0; transition: color 0.3s ease; }
-        .card-desc { color: var(--text-muted); font-size: 0.85rem; margin: 0; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;}
-        .glass-card:hover .card-title { color: var(--brand-cyan); }
-        .glass-card.purple:hover .card-title { color: var(--brand-purple); }
-        .loading-text { color: var(--brand-cyan); font-family: 'Courier New', Courier, monospace; grid-column: 1 / -1; }
+
+        .card-content { flex: 1; overflow: hidden; }
+        .card-title { color: var(--text-main); font-size: 1.1rem; font-weight: 600; margin: 0 0 5px 0; }
+        .card-desc { color: var(--text-muted); font-size: 0.85rem; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        
+        .loading-text { color: var(--brand-cyan); font-family: 'Courier New', monospace; grid-column: 1 / -1; }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="hero">
-            <h1>37° <span class="cyan">Nav</span></h1>
-            <p>基于 Cloudflare AI + Vectorize 的语义导航中枢</p>
+            <div class="logo-container">
+                <img src="./logo.png" alt="37° Nav Logo" class="nav-logo">
+                <h1>37° <span class="cyan">Nav</span></h1>
+            </div>
+            <p>星际指挥中心：基于边缘计算与 AI 的语义导航链路</p>
             
             <div class="search-container">
                 <i class="fa-solid fa-robot"></i>
-                <input type="text" id="search-input" class="search-input" placeholder="唤醒 AI：描述一下你想要找什么工具或资源？">
+                <input type="text" id="search-input" class="search-input" placeholder="输入需求，由 AI 检索最优节点...">
             </div>
         </div>
 
-        <h2 class="category-title" id="grid-title"><i class="fa-solid fa-radar"></i> 已连接节点</h2>
-        
+        <h2 class="category-title" id="grid-title"><i class="fa-solid fa-radar"></i> 节点阵列</h2>
         <div class="grid" id="nav-grid">
-            <p class="loading-text">> 正在从边缘节点同步数据...</p>
+            <p class="loading-text">> 正在校准边缘节点数据...</p>
         </div>
     </div>
 
@@ -73,11 +148,10 @@
         const gridTitle = document.getElementById('grid-title');
         const searchInput = document.getElementById('search-input');
         
-        // 渲染卡片的通用函数
         function renderCards(links) {
             grid.innerHTML = ''; 
             if (links.length === 0) {
-                grid.innerHTML = '<p class="loading-text" style="color: var(--text-muted);">> AI 未能在记忆库中找到相关匹配。</p>';
+                grid.innerHTML = '<p class="loading-text" style="color: var(--text-muted);">> AI 未能匹配到相关坐标。</p>';
                 return;
             }
             links.forEach(link => {
@@ -95,49 +169,40 @@
             });
         }
 
-        // 默认加载全部数据 (走 KV 缓存)
         async function loadAllLinks() {
             try {
-                gridTitle.innerHTML = '<i class="fa-solid fa-radar"></i> 已连接节点';
+                gridTitle.innerHTML = '<i class="fa-solid fa-radar"></i> 节点阵列';
                 const response = await fetch('/api/links');
                 const links = await response.json();
                 renderCards(links);
             } catch (error) {
-                grid.innerHTML = '<p class="loading-text" style="color: #ff4757;">> [错误] 数据链路中断。</p>';
+                grid.innerHTML = '<p class="loading-text" style="color: #ff4757;">> [错误] 链路同步中断。</p>';
             }
         }
 
-        // AI 语义搜索 (走 AI 模型)
         async function searchLinks(query) {
             try {
-                grid.innerHTML = '<p class="loading-text" style="color: var(--brand-purple);">> 正在呼叫 AI 神经元，进行高维语义检索中...</p>';
+                grid.innerHTML = '<p class="loading-text" style="color: var(--brand-purple);">> 正在调用 AI 神经元进行语义检索...</p>';
                 gridTitle.innerHTML = '<i class="fa-solid fa-bolt"></i> AI 匹配结果';
-                
                 const response = await fetch('/api/search?q=' + encodeURIComponent(query));
                 const links = await response.json();
                 renderCards(links);
             } catch (error) {
-                grid.innerHTML = '<p class="loading-text" style="color: #ff4757;">> [错误] AI 大脑无响应。</p>';
+                grid.innerHTML = '<p class="loading-text" style="color: #ff4757;">> [错误] AI 脑机接口异常。</p>';
             }
         }
 
-        // 监听搜索框的输入 (加入了防抖设计，也就是你停止打字 500 毫秒后才去搜索)
         let timeout = null;
         searchInput.addEventListener('input', (e) => {
             clearTimeout(timeout);
             const query = e.target.value.trim();
-            
             if (query.length === 0) {
-                loadAllLinks(); // 如果清空了搜索框，就恢复显示全部
+                loadAllLinks();
                 return;
             }
-            
-            timeout = setTimeout(() => {
-                searchLinks(query);
-            }, 500); // 停止打字 0.5 秒后触发 AI 搜索
+            timeout = setTimeout(() => searchLinks(query), 500);
         });
 
-        // 页面初始化
         window.onload = loadAllLinks;
     </script>
 </body>
