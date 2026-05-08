@@ -44,13 +44,11 @@
         ::-webkit-scrollbar-thumb { background: #6272A4; border-radius: 3px; }
         ::-webkit-scrollbar-thumb:hover { background: #BD93F9; }
 
-        /* 扁平化动态卡片引擎 */
         .node-card { border: 1px solid rgba(255, 255, 255, 0.05); transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
         .node-card:hover { border-color: var(--card-color); transform: translateY(-2px); }
         .node-card:hover .node-title { color: var(--card-color); }
         .node-icon-box { color: var(--card-color); transition: all 0.3s ease; }
 
-        /* 自定义搜索引擎下拉菜单过渡层 */
         .search-dropdown-wrapper { position: relative; }
         .search-dropdown-menu { position: absolute; top: 100%; left: -5px; padding-top: 10px; display: none; z-index: 100;}
         .search-dropdown-wrapper:hover .search-dropdown-menu { display: block; }
@@ -58,12 +56,13 @@
         .search-opt { padding: 8px 15px; cursor: pointer; color: #6272A4; transition: all 0.2s; display: flex; justify-content: center;}
         .search-opt:hover { background: #44475A; color: #8BE9FD; }
 
-        /* 模态框系统 */
         .cyber-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8); backdrop-filter: blur(5px); display: flex; align-items: center; justify-content: center; z-index: 9999; opacity: 0; pointer-events: none; transition: opacity 0.2s ease; }
         .cyber-overlay.active { opacity: 1; pointer-events: all; }
-        .cyber-modal { background: #282A36; border: 1px solid #BD93F9; box-shadow: 0 0 30px rgba(189, 147, 249, 0.2); border-radius: 12px; padding: 25px; width: 90%; max-width: 400px; transform: scale(0.95); transition: transform 0.2s ease; }
+        .cyber-modal { position: relative; background: #282A36; border: 1px solid #BD93F9; box-shadow: 0 0 30px rgba(189, 147, 249, 0.2); border-radius: 12px; padding: 25px; width: 90%; max-width: 400px; transform: scale(0.95); transition: transform 0.2s ease; }
         .cyber-overlay.active .cyber-modal { transform: scale(1); }
-        .btn-modal { padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: bold; border: 1px solid; transition: all 0.2s; background: transparent; }
+        .modal-close-x { position: absolute; top: 15px; right: 20px; color: #6272A4; font-size: 1.2rem; cursor: pointer; transition: color 0.2s; }
+        .modal-close-x:hover { color: #FF5555; }
+        .btn-modal { padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: bold; border: 1px solid; transition: all 0.2s; background: transparent; }
         .btn-modal.cancel { border-color: #6272A4; color: #6272A4; }
         .btn-modal.cancel:hover { background: #44475A; color: #F8F8F2; }
         .btn-modal.confirm { border-color: #BD93F9; color: #BD93F9; background: rgba(189, 147, 249, 0.1); }
@@ -71,7 +70,6 @@
         .cyber-input { width: 100%; padding: 12px; background: #1E1F29; border: 1px solid #44475A; color: #F8F8F2; border-radius: 6px; box-sizing: border-box; margin-bottom: 20px; outline: none; transition: border-color 0.2s;}
         .cyber-input:focus { border-color: #8BE9FD; }
 
-        /* 高清实心心跳，去除模糊滤镜 */
         .sharp-heart { text-shadow: 0 0 3px rgba(255, 85, 85, 0.3); }
     </style>
 </head>
@@ -164,11 +162,23 @@
             showPrompt(title, msg, type = 'text') {
                 return new Promise(resolve => {
                     const overlay = this.createContainer('cyber-prompt');
-                    overlay.innerHTML = `<div class="cyber-modal"><div class="cyber-modal-title" style="color:var(--dracula-cyan);"><i class="fa-solid fa-terminal"></i> ${title}</div><div class="cyber-modal-msg" style="color:var(--dracula-fg); margin-bottom:15px;">${msg}</div><input type="${type}" id="prompt-input" class="cyber-input" autocomplete="off"><div class="cyber-modal-actions"><button class="btn-modal cancel" id="p-cancel">Cancel</button><button class="btn-modal confirm" id="p-ok">Authorize</button></div></div>`;
+                    overlay.innerHTML = `
+                        <div class="cyber-modal">
+                            <i class="fa-solid fa-xmark modal-close-x" id="p-close-x"></i>
+                            <div class="cyber-modal-title" style="color:var(--dracula-cyan);"><i class="fa-solid fa-terminal"></i> ${title}</div>
+                            <div class="cyber-modal-msg" style="color:var(--dracula-fg); margin-bottom:15px;">${msg}</div>
+                            <input type="${type}" id="prompt-input" class="cyber-input" autocomplete="off">
+                            <div class="cyber-modal-actions">
+                                <button class="btn-modal cancel" id="p-cancel">Cancel</button>
+                                <button class="btn-modal confirm" id="p-ok">Authorize</button>
+                            </div>
+                        </div>`;
                     requestAnimationFrame(() => overlay.classList.add('active'));
                     const input = overlay.querySelector('#prompt-input');
                     input.focus();
-                    overlay.querySelector('#p-cancel').onclick = () => { this.close(overlay); resolve(null); };
+                    const cancelLogic = () => { this.close(overlay); resolve(null); };
+                    overlay.querySelector('#p-cancel').onclick = cancelLogic;
+                    overlay.querySelector('#p-close-x').onclick = cancelLogic;
                     overlay.querySelector('#p-ok').onclick = () => { this.close(overlay); resolve(input.value); };
                     input.addEventListener('keypress', (e) => { if(e.key === 'Enter') overlay.querySelector('#p-ok').click(); });
                 });
@@ -179,9 +189,20 @@
                     const themeColor = isDanger ? '#FF5555' : '#50FA7B';
                     const btnClass = isDanger ? 'danger' : 'confirm';
                     const icon = isDanger ? 'fa-triangle-exclamation' : 'fa-circle-check';
-                    overlay.innerHTML = `<div class="cyber-modal" style="border-color:${themeColor}"><div class="cyber-modal-title" style="color:${themeColor};"><i class="fa-solid ${icon}"></i> ${title}</div><div class="cyber-modal-msg" style="color:var(--dracula-fg); margin-bottom:20px;">${msg}</div><div class="cyber-modal-actions"><button class="btn-modal cancel" id="c-cancel">Cancel</button><button class="btn-modal ${btnClass}" id="c-ok">Confirm</button></div></div>`;
+                    overlay.innerHTML = `
+                        <div class="cyber-modal" style="border-color:${themeColor}">
+                            <i class="fa-solid fa-xmark modal-close-x" id="c-close-x"></i>
+                            <div class="cyber-modal-title" style="color:${themeColor};"><i class="fa-solid ${icon}"></i> ${title}</div>
+                            <div class="cyber-modal-msg" style="color:var(--dracula-fg); margin-bottom:20px;">${msg}</div>
+                            <div class="cyber-modal-actions">
+                                <button class="btn-modal cancel" id="c-cancel">Cancel</button>
+                                <button class="btn-modal ${btnClass}" id="c-ok">Confirm</button>
+                            </div>
+                        </div>`;
                     requestAnimationFrame(() => overlay.classList.add('active'));
-                    overlay.querySelector('#c-cancel').onclick = () => { this.close(overlay); resolve(false); };
+                    const cancelLogic = () => { this.close(overlay); resolve(false); };
+                    overlay.querySelector('#c-cancel').onclick = cancelLogic;
+                    overlay.querySelector('#c-close-x').onclick = cancelLogic;
                     overlay.querySelector('#c-ok').onclick = () => { this.close(overlay); resolve(true); };
                 });
             }
@@ -194,14 +215,12 @@
         const navCatContainer = document.getElementById('nav-categories');
         const draculaColors = ['#8BE9FD', '#50FA7B', '#FF79C6', '#BD93F9', '#FF5555', '#F1FA8C', '#FFB86C'];
 
-        // 字符串哈希算法 (用于稳定分配缺省颜色，拒绝乱闪)
         function getHashColor(str) {
             let hash = 0;
             for (let i = 0; i < str.length; i++) { hash = str.charCodeAt(i) + ((hash << 5) - hash); }
             return draculaColors[Math.abs(hash) % draculaColors.length];
         }
 
-        // 自定义下拉菜单绑定
         let activeSearchUrl = "https://www.google.com/search?q=";
         document.querySelectorAll('.search-opt').forEach(opt => {
             opt.addEventListener('click', function() {
@@ -266,6 +285,7 @@
             }
         }
 
+        // 【重构核心：局域网穿透与 FA 手动覆盖】
         function buildGrid(nodesArray) {
             const grid = document.createElement('div');
             grid.className = 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6';
@@ -274,39 +294,56 @@
                 const card = document.createElement('a');
                 card.href = link.url; card.target = '_blank';
                 
-                // 【稳定回退色】利用标题 Hash 分配固定颜色，拒绝每次刷新乱跳
                 const fallbackHex = getHashColor(link.title || link.url);
                 card.style.setProperty('--card-color', fallbackHex);
                 card.className = `node-card relative bg-dracula-current/30 hover:bg-dracula-current/60 backdrop-blur-md rounded-xl p-4 flex items-center gap-4 group w-full min-w-0 overflow-hidden block`;
                 
+                let iconStr = (link.icon || '').trim();
                 let iconHTML = '';
-                if (link.icon && link.icon.startsWith('http')) {
-                    iconHTML = `
-                        <div class="relative w-10 h-10 flex items-center justify-center">
-                            <img src="${link.icon}" loading="lazy" alt="icon" class="w-full h-full rounded object-contain filter drop-shadow-md group-hover:scale-110 transition-transform duration-300" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
-                            <i class="fa-solid fa-link node-icon-box text-xl hidden group-hover:scale-110 transition-transform duration-300"></i>
-                        </div>`;
 
-                    const hiddenImg = new Image();
-                    hiddenImg.crossOrigin = "Anonymous";
-                    hiddenImg.onload = () => {
-                        const canvas = document.createElement('canvas');
-                        const ctx = canvas.getContext('2d');
-                        canvas.width = 32; canvas.height = 32;
-                        ctx.drawImage(hiddenImg, 0, 0, 32, 32);
+                // 如果用户手动填了 FontAwesome 代码 (比如 fa-solid fa-server)
+                if (iconStr.startsWith('fa-')) {
+                    iconHTML = `<div class="w-10 h-10 flex items-center justify-center"><i class="${iconStr} node-icon-box text-2xl group-hover:scale-110 transition-transform duration-300"></i></div>`;
+                } 
+                else {
+                    let targetImgUrl = iconStr;
+                    // 如果图标为空（通常是由于内网 IP 被 AI 拦截，或者抓取失败）
+                    if (!targetImgUrl) {
                         try {
-                            const data = ctx.getImageData(0, 0, 32, 32).data;
-                            let r=0, g=0, b=0, count=0;
-                            for(let i=0; i<data.length; i+=4){
-                                if(data[i+3] < 128 || (data[i]>240 && data[i+1]>240 && data[i+2]>240) || (data[i]<15 && data[i+1]<15 && data[i+2]<15)) continue;
-                                r += data[i]; g += data[i+1]; b += data[i+2]; count++;
-                            }
-                            if(count > 0) card.style.setProperty('--card-color', `rgb(${Math.floor(r/count)},${Math.floor(g/count)},${Math.floor(b/count)})`);
-                        } catch(e) {}
-                    };
-                    hiddenImg.src = link.icon;
-                } else {
-                    iconHTML = `<div class="w-10 h-10 flex items-center justify-center"><i class="${link.icon || 'fa-solid fa-link'} node-icon-box text-xl group-hover:scale-110 transition-transform duration-300"></i></div>`;
+                            // 强制生成本地探测直连链接
+                            targetImgUrl = new URL(link.url).origin + '/favicon.ico';
+                        } catch(e) { targetImgUrl = ''; }
+                    }
+
+                    if (targetImgUrl) {
+                        iconHTML = `
+                            <div class="relative w-10 h-10 flex items-center justify-center">
+                                <img src="${targetImgUrl}" loading="lazy" alt="icon" class="w-full h-full rounded object-contain filter drop-shadow-md group-hover:scale-110 transition-transform duration-300" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                                <i class="fa-solid fa-globe node-icon-box text-xl hidden group-hover:scale-110 transition-transform duration-300"></i>
+                            </div>`;
+
+                        const hiddenImg = new Image();
+                        hiddenImg.crossOrigin = "Anonymous";
+                        hiddenImg.onload = () => {
+                            const canvas = document.createElement('canvas');
+                            const ctx = canvas.getContext('2d');
+                            canvas.width = 32; canvas.height = 32;
+                            ctx.drawImage(hiddenImg, 0, 0, 32, 32);
+                            try {
+                                const data = ctx.getImageData(0, 0, 32, 32).data;
+                                let r=0, g=0, b=0, count=0;
+                                for(let i=0; i<data.length; i+=4){
+                                    if(data[i+3] < 128 || (data[i]>240 && data[i+1]>240 && data[i+2]>240) || (data[i]<15 && data[i+1]<15 && data[i+2]<15)) continue;
+                                    r += data[i]; g += data[i+1]; b += data[i+2]; count++;
+                                }
+                                if(count > 0) card.style.setProperty('--card-color', `rgb(${Math.floor(r/count)},${Math.floor(g/count)},${Math.floor(b/count)})`);
+                            } catch(e) {}
+                        };
+                        hiddenImg.src = targetImgUrl;
+                    } else {
+                        // 终极兜底地球图标
+                        iconHTML = `<div class="w-10 h-10 flex items-center justify-center"><i class="fa-solid fa-globe node-icon-box text-xl group-hover:scale-110 transition-transform duration-300"></i></div>`;
+                    }
                 }
 
                 const adminHtml = isAdmin ? `
@@ -380,7 +417,6 @@
             }, 800);
         });
 
-        // 极限紧凑+高精度补零时钟
         const gTime = new Date('2024-01-01T00:00:00Z').getTime();
         function updateUptime() {
             const diff = new Date().getTime() - gTime;

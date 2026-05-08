@@ -22,7 +22,6 @@
         .back-link { color: var(--text-muted); text-decoration: none; font-size: 0.9rem; transition: color 0.2s; border: 1px solid transparent; padding: 5px 10px; border-radius: 6px;}
         .back-link:hover { color: var(--cyan); border-color: var(--cyan); background: rgba(139,233,253,0.1);}
 
-        /* 左右分栏 Dashboard 布局 */
         .dashboard-grid { display: grid; grid-template-columns: 1fr; gap: 25px; max-width: 1400px; margin: 0 auto; }
         @media (min-width: 1024px) { .dashboard-grid { grid-template-columns: 350px 1fr; } }
 
@@ -63,19 +62,12 @@
         .btn-icon.edit:hover { color: var(--cyan); border-color: var(--cyan); background: rgba(139,233,253,0.1);}
         .btn-icon.del:hover { color: var(--red); border-color: var(--red); background: rgba(255,85,85,0.1);}
 
-        /* ===================================================
-           UI优化：模态框支持 Relative 坐标与右上角关闭按钮
-           =================================================== */
         .cyber-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8); backdrop-filter: blur(5px); display: flex; align-items: center; justify-content: center; z-index: 9999; opacity: 0; pointer-events: none; transition: opacity 0.2s ease; }
         .cyber-overlay.active { opacity: 1; pointer-events: all; }
-        
         .cyber-modal { position: relative; background: var(--panel); border: 1px solid var(--cyan); border-radius: 12px; padding: 25px; width: 90%; max-width: 450px; transform: scale(0.95); transition: transform 0.2s ease; box-shadow: 0 10px 30px rgba(0,0,0,0.5);}
         .cyber-overlay.active .cyber-modal { transform: scale(1); }
-        
-        /* 右上角关闭大X */
         .modal-close-x { position: absolute; top: 15px; right: 20px; color: var(--text-muted); font-size: 1.2rem; cursor: pointer; transition: color 0.2s; }
         .modal-close-x:hover { color: var(--red); }
-
         .btn-modal { padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: bold; border: 1px solid; transition: all 0.2s; background: transparent; font-family: inherit;}
         .btn-modal.cancel { border-color: var(--text-muted); color: var(--text-muted); }
         .btn-modal.cancel:hover { background: var(--border); color: var(--text); }
@@ -111,15 +103,15 @@
                 <h2 style="color: var(--pink);"><i class="fa-solid fa-satellite-dish"></i> 节点探针注入</h2>
                 <form id="add-node-form">
                     <div class="form-group">
-                        <label>目标链接 (先填此项激活 AI)</label>
+                        <label>目标链接 (内网IP将绕过AI走本地通道)</label>
                         <div class="input-btn-group">
-                            <input type="url" id="node-url" required placeholder="https://...">
+                            <input type="url" id="node-url" required placeholder="https:// 或 内网IP">
                             <button type="button" id="btn-parse" class="btn btn-ai" title="执行 AI 边缘解析"><i class="fa-solid fa-wand-magic-sparkles"></i></button>
                         </div>
                     </div>
                     <div class="form-group"><label>系统命名 (Title)</label><input type="text" id="node-title" required></div>
                     <div class="form-group"><label>特征摘要 (Description)</label><textarea id="node-desc" rows="2"></textarea></div>
-                    <div class="form-group"><label>高清图标 (Icon / FA)</label><input type="text" id="node-icon"></div>
+                    <div class="form-group"><label>图标 (留空自动穿透 / 填 fa-xx 指定矢量)</label><input type="text" id="node-icon" placeholder="留空 或 fa-solid fa-server"></div>
                     <div class="form-group"><label>归属防区 (Category)</label><select id="node-category"></select></div>
                     <button type="submit" class="btn btn-primary">注入节点 [ INJECT ]</button>
                     <div id="status-msg" style="text-align:center; font-size:0.8rem; margin-top:10px; height: 16px;"></div>
@@ -215,7 +207,7 @@
                                 <div class="form-group"><label>节点名称 (Title)</label><input type="text" id="e-title" value="${node.title}" required></div>
                                 <div class="form-group"><label>特征描述 (Description)</label><textarea id="e-desc" rows="2">${node.description||''}</textarea></div>
                                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
-                                    <div class="form-group"><label>图标地址 (Icon)</label><input type="text" id="e-icon" value="${node.icon||''}"></div>
+                                    <div class="form-group"><label>图标地址 (支持 fa-xx)</label><input type="text" id="e-icon" value="${node.icon||''}"></div>
                                     <div class="form-group"><label>归属分类 (Category)</label><select id="e-category">${catOptions}</select></div>
                                 </div>
                                 <div class="cyber-modal-actions" style="margin-top: 15px;">
@@ -230,7 +222,6 @@
                     overlay.querySelector('#e-cancel').onclick = cancelLogic;
                     overlay.querySelector('#e-close-x').onclick = cancelLogic;
                     
-                    // 【重磅植入】编辑面板的独立 AI 解析引擎
                     const btnParse = overlay.querySelector('#e-btn-parse');
                     btnParse.onclick = async () => {
                         const urlInput = overlay.querySelector('#e-url').value;
@@ -243,7 +234,7 @@
                                 const data = await res.json();
                                 if(data.title) overlay.querySelector('#e-title').value = data.title;
                                 if(data.description) overlay.querySelector('#e-desc').value = data.description;
-                                if(data.icon) overlay.querySelector('#e-icon').value = data.icon;
+                                if(data.icon !== undefined) overlay.querySelector('#e-icon').value = data.icon;
                             }
                         } finally {
                             btnParse.innerHTML = oriHtml; btnParse.disabled = false;
@@ -390,7 +381,7 @@
                     const data = await res.json();
                     if(data.title) document.getElementById('node-title').value = data.title;
                     if(data.description) document.getElementById('node-desc').value = data.description;
-                    if(data.icon) document.getElementById('node-icon').value = data.icon;
+                    if(data.icon !== undefined) document.getElementById('node-icon').value = data.icon;
                     statusMsg.style.color = "var(--green)"; statusMsg.innerText = "解析完成。";
                 }
             } catch(e) {
