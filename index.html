@@ -44,11 +44,13 @@
         ::-webkit-scrollbar-thumb { background: #6272A4; border-radius: 3px; }
         ::-webkit-scrollbar-thumb:hover { background: #BD93F9; }
 
+        /* 扁平化动态卡片引擎 */
         .node-card { border: 1px solid rgba(255, 255, 255, 0.05); transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
         .node-card:hover { border-color: var(--card-color); transform: translateY(-2px); }
         .node-card:hover .node-title { color: var(--card-color); }
         .node-icon-box { color: var(--card-color); transition: all 0.3s ease; }
 
+        /* 自定义搜索引擎下拉菜单过渡层 */
         .search-dropdown-wrapper { position: relative; }
         .search-dropdown-menu { position: absolute; top: 100%; left: -5px; padding-top: 10px; display: none; z-index: 100;}
         .search-dropdown-wrapper:hover .search-dropdown-menu { display: block; }
@@ -56,13 +58,14 @@
         .search-opt { padding: 8px 15px; cursor: pointer; color: #6272A4; transition: all 0.2s; display: flex; justify-content: center;}
         .search-opt:hover { background: #44475A; color: #8BE9FD; }
 
+        /* 模态框系统 */
         .cyber-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8); backdrop-filter: blur(5px); display: flex; align-items: center; justify-content: center; z-index: 9999; opacity: 0; pointer-events: none; transition: opacity 0.2s ease; }
         .cyber-overlay.active { opacity: 1; pointer-events: all; }
         .cyber-modal { position: relative; background: #282A36; border: 1px solid #BD93F9; box-shadow: 0 0 30px rgba(189, 147, 249, 0.2); border-radius: 12px; padding: 25px; width: 90%; max-width: 400px; transform: scale(0.95); transition: transform 0.2s ease; }
         .cyber-overlay.active .cyber-modal { transform: scale(1); }
         .modal-close-x { position: absolute; top: 15px; right: 20px; color: #6272A4; font-size: 1.2rem; cursor: pointer; transition: color 0.2s; }
         .modal-close-x:hover { color: #FF5555; }
-        .btn-modal { padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: bold; border: 1px solid; transition: all 0.2s; background: transparent; }
+        .btn-modal { padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: bold; border: 1px solid; transition: all 0.2s; background: transparent; font-family: inherit;}
         .btn-modal.cancel { border-color: #6272A4; color: #6272A4; }
         .btn-modal.cancel:hover { background: #44475A; color: #F8F8F2; }
         .btn-modal.confirm { border-color: #BD93F9; color: #BD93F9; background: rgba(189, 147, 249, 0.1); }
@@ -285,7 +288,7 @@
             }
         }
 
-        // 【重构核心：局域网穿透与 FA 手动覆盖】
+        // 【重构核心：无界光晕视觉引擎】
         function buildGrid(nodesArray) {
             const grid = document.createElement('div');
             grid.className = 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6';
@@ -301,26 +304,20 @@
                 let iconStr = (link.icon || '').trim();
                 let iconHTML = '';
 
-                // 如果用户手动填了 FontAwesome 代码 (比如 fa-solid fa-server)
                 if (iconStr.startsWith('fa-')) {
-                    iconHTML = `<div class="w-10 h-10 flex items-center justify-center"><i class="${iconStr} node-icon-box text-2xl group-hover:scale-110 transition-transform duration-300"></i></div>`;
+                    iconHTML = `<i class="${iconStr} node-icon-box text-[28px] drop-shadow-md group-hover:scale-110 transition-transform duration-300"></i>`;
                 } 
                 else {
                     let targetImgUrl = iconStr;
-                    // 如果图标为空（通常是由于内网 IP 被 AI 拦截，或者抓取失败）
                     if (!targetImgUrl) {
-                        try {
-                            // 强制生成本地探测直连链接
-                            targetImgUrl = new URL(link.url).origin + '/favicon.ico';
-                        } catch(e) { targetImgUrl = ''; }
+                        try { targetImgUrl = new URL(link.url).origin + '/favicon.ico'; } 
+                        catch(e) { targetImgUrl = ''; }
                     }
 
                     if (targetImgUrl) {
                         iconHTML = `
-                            <div class="relative w-10 h-10 flex items-center justify-center">
-                                <img src="${targetImgUrl}" loading="lazy" alt="icon" class="w-full h-full rounded object-contain filter drop-shadow-md group-hover:scale-110 transition-transform duration-300" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
-                                <i class="fa-solid fa-globe node-icon-box text-xl hidden group-hover:scale-110 transition-transform duration-300"></i>
-                            </div>`;
+                            <img src="${targetImgUrl}" loading="lazy" alt="icon" class="w-full h-full rounded-lg object-contain drop-shadow-md group-hover:scale-110 transition-transform duration-300" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                            <i class="fa-solid fa-globe node-icon-box text-[28px] hidden group-hover:scale-110 transition-transform duration-300"></i>`;
 
                         const hiddenImg = new Image();
                         hiddenImg.crossOrigin = "Anonymous";
@@ -341,8 +338,7 @@
                         };
                         hiddenImg.src = targetImgUrl;
                     } else {
-                        // 终极兜底地球图标
-                        iconHTML = `<div class="w-10 h-10 flex items-center justify-center"><i class="fa-solid fa-globe node-icon-box text-xl group-hover:scale-110 transition-transform duration-300"></i></div>`;
+                        iconHTML = `<i class="fa-solid fa-globe node-icon-box text-[28px] drop-shadow-md group-hover:scale-110 transition-transform duration-300"></i>`;
                     }
                 }
 
@@ -353,10 +349,13 @@
 
                 card.innerHTML = `
                     ${adminHtml}
-                    <div class="flex-shrink-0 w-12 h-12 bg-dracula-bg rounded-lg flex items-center justify-center border border-dracula-current">
-                        ${iconHTML}
+                    <div class="relative flex-shrink-0 w-12 h-12 flex items-center justify-center">
+                        <div class="absolute inset-0 opacity-10 group-hover:opacity-30 blur-lg rounded-full transition-opacity duration-500" style="background-color: var(--card-color);"></div>
+                        <div class="relative z-10 w-10 h-10 flex items-center justify-center">
+                            ${iconHTML}
+                        </div>
                     </div>
-                    <div class="flex-1 min-w-0">
+                    <div class="flex-1 min-w-0 ml-2">
                         <h3 class="node-title text-base font-bold text-dracula-fg truncate transition-colors">${link.title}</h3>
                         <p class="text-xs text-dracula-comment truncate mt-1">${link.description || '暂无特征数据'}</p>
                     </div>
