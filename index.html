@@ -45,7 +45,7 @@
         ::-webkit-scrollbar-thumb:hover { background: #BD93F9; }
 
         /* ========================================================
-           赛博跑马灯卡片引擎 (带有跃迁阻尼刹车特效)
+           赛博跑马灯卡片引擎 (序列充能 + 全边框点火特效)
            ======================================================== */
         @property --bg-angle {
             syntax: "<angle>";
@@ -59,26 +59,32 @@
         }
 
         .node-card { 
-            border: 1px solid rgba(255, 255, 255, 0.05); 
+            border: 1px solid rgba(255, 255, 255, 0.04); 
             background: rgba(68, 71, 90, 0.25);
             backdrop-filter: blur(12px);
-            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
-            position: relative;
             border-radius: 14px;
+            position: relative;
+            /* 鼠标移开时：没有延迟，发光瞬间熄灭，平滑归位 */
+            transition: border-color 0.3s ease, box-shadow 0.3s ease, transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
         }
         
         .node-card:hover { 
-            border-color: transparent; 
+            /* 最终点火状态：整个边框被专属颜色点亮，并附带内外辉光 */
+            border-color: var(--card-color); 
+            box-shadow: 0 0 15px -2px var(--card-color), inset 0 0 8px -3px var(--card-color);
             transform: translateY(-3px); 
+            /* 鼠标移入时核心魔法：推迟边框发光 0.55秒，先让跑马灯跑完！ */
+            transition: border-color 0.4s ease 0.55s, box-shadow 0.4s ease 0.55s, transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0s;
         }
         .node-card:hover .node-title { color: var(--card-color); }
         
+        /* 跑马灯电流本尊 */
         .node-card::before {
             content: '';
             position: absolute;
-            inset: -1.5px; 
+            inset: -1px; /* 完美包裹 1px 的边框 */
             border-radius: 15px; 
-            padding: 1.5px; 
+            padding: 1px; 
             background: conic-gradient(from var(--bg-angle), transparent 50%, var(--card-color) 100%);
             -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
             -webkit-mask-composite: xor;
@@ -89,28 +95,34 @@
             z-index: 10;
         }
 
-        /* 核心升级：阻尼刹车动画 */
         .node-card:hover::before {
             opacity: 1;
-            /* 1.2秒跑一圈，定制的贝塞尔曲线实现极速起步+缓慢刹车，1次执行，forwards 永久定格最后一帧 */
-            animation: spin-border 1.2s cubic-bezier(0.1, 0.9, 0.2, 1) 1 forwards; 
+            /* 电流启动：0.65秒跑完一圈，附带极其顺滑的减速阻尼，定格在尾帧 */
+            animation: spin-border 0.65s cubic-bezier(0.2, 0.8, 0.2, 1) 1 forwards; 
         }
 
+        /* ========================================================
+           图标物理引擎 (去除发光，增强立体质感)
+           ======================================================== */
         .card-icon {
             width: 46px; 
             height: 46px;
             object-fit: contain; 
             border-radius: 12px;
             transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            filter: drop-shadow(0 4px 6px rgba(0,0,0,0.5));
+            /* 初始状态淡淡的物理投影 */
+            filter: drop-shadow(0 4px 6px rgba(0,0,0,0.4));
             position: relative; 
             z-index: 1;
         }
+        
         .node-card:hover .card-icon {
             transform: scale(1.1) translateY(-2px);
-            filter: drop-shadow(0 8px 16px var(--card-color));
+            /* 去除原先的 var(--card-color) 发光，改为极具重量感的深沉物理阴影 */
+            filter: drop-shadow(0 8px 12px rgba(0,0,0,0.75));
         }
 
+        /* 搜索组件 */
         .search-dropdown-wrapper { position: relative; }
         .search-dropdown-menu { position: absolute; top: 100%; left: -5px; padding-top: 10px; display: none; z-index: 100;}
         .search-dropdown-wrapper:hover .search-dropdown-menu { display: block; }
@@ -118,6 +130,7 @@
         .search-opt { padding: 8px 15px; cursor: pointer; color: #6272A4; transition: all 0.2s; display: flex; justify-content: center;}
         .search-opt:hover { background: #44475A; color: #8BE9FD; }
 
+        /* 赛博弹窗系统 */
         .cyber-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8); backdrop-filter: blur(5px); display: flex; align-items: center; justify-content: center; z-index: 9999; opacity: 0; pointer-events: none; transition: opacity 0.2s ease; }
         .cyber-overlay.active { opacity: 1; pointer-events: all; }
         .cyber-modal { position: relative; background: #282A36; border: 1px solid #BD93F9; box-shadow: 0 0 30px rgba(189, 147, 249, 0.2); border-radius: 12px; padding: 25px; width: 90%; max-width: 400px; transform: scale(0.95); transition: transform 0.2s ease; }

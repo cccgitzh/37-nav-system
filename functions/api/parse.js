@@ -1,5 +1,5 @@
 /**
- * 37° Nav - 边缘智能靶向解析 API (Qwen-7B 极速版 + 强制中文翻译防坠毁)
+ * 37° Nav - 边缘智能靶向解析 API (完美极速降维版)
  * 架构：Cloudflare Pages + HTMLRewriter + Workers AI
  */
 
@@ -29,8 +29,6 @@ export async function onRequest(context) {
         
         const targetUrlObj = new URL(targetUrl);
         let domain = targetUrlObj.hostname.replace(/^www\./, '');
-        const domainParts = domain.split('.');
-        const rootDomain = domainParts.length > 2 ? domainParts.slice(-2).join('.') : domain;
 
         const isLocalIP = /^(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[0-1])\.|127\.|localhost)/.test(domain);
 
@@ -56,8 +54,9 @@ export async function onRequest(context) {
             }), { headers: { 'Content-Type': 'application/json', ...corsHeaders } });
         }
 
+        // 缩短网页抓取超时时间至 3 秒，给 AI 留下充足的思考时间
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 4500);
+        const timeoutId = setTimeout(() => controller.abort(), 3000);
 
         let fetchResponse;
         try {
@@ -76,12 +75,11 @@ export async function onRequest(context) {
             fetchResponse = { status: 504 }; 
         }
 
-        let extracted = { title: '', ogTitle: '', desc: '', ogDesc: '', h1: '', bodyText: '', appleIcon: '', icon: '', shortcutIcon: '' };
+        let extracted = { title: '', ogTitle: '', desc: '', ogDesc: '', bodyText: '', appleIcon: '', icon: '', shortcutIcon: '' };
 
         if (fetchResponse.status === 200) {
             const rewriter = new HTMLRewriter()
                 .on('title', { text(text) { extracted.title += text.text; } })
-                .on('h1', { text(text) { extracted.h1 += text.text + ' '; } })
                 .on('meta', {
                     element(el) {
                         const name = (el.getAttribute('name') || '').toLowerCase();
@@ -102,14 +100,13 @@ export async function onRequest(context) {
                         else if (rel === 'shortcut icon') extracted.shortcutIcon = href;
                     }
                 })
-                .on('body', { text(text) { if (extracted.bodyText.length < 3000) extracted.bodyText += text.text + ' '; } });
+                // 仅抓取极少量的 Body 作为最后兜底，防止内存溢出
+                .on('body', { text(text) { if (extracted.bodyText.length < 300) extracted.bodyText += text.text + ' '; } });
 
             await rewriter.transform(fetchResponse).text();
         }
 
-        extracted.bodyText = extracted.bodyText.replace(/\s+/g, ' ').trim();
         const finalTitleRaw = (extracted.ogTitle || extracted.title).trim() || domain;
-
         let finalIcon = extracted.appleIcon || extracted.icon || extracted.shortcutIcon;
         if (finalIcon) {
             try { finalIcon = new URL(finalIcon, targetUrl).href; } 
@@ -118,38 +115,29 @@ export async function onRequest(context) {
             finalIcon = `https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=${encodeURIComponent(targetUrl)}&size=128`;
         }
 
-        const wafKeywords = ['just a moment', 'attention required', 'enable javascript', '验证码', 'cloudflare', 'security check'];
-        const isBlocked = fetchResponse.status !== 200 || wafKeywords.some(kw => extracted.bodyText.toLowerCase().includes(kw) || finalTitleRaw.toLowerCase().includes(kw));
-        
-        if (isBlocked || extracted.bodyText.length < 20) {
-            extracted.bodyText = "WAF_BLOCKED_OR_EMPTY"; 
-        }
+        // 【极致降维提取】：如果存在 Meta 描述，就绝不给 AI 看啰嗦的正文
+        let rawDesc = (extracted.ogDesc || extracted.desc || '').trim();
+        let safeAIInput = rawDesc ? rawDesc.substring(0, 300) : extracted.bodyText.replace(/\s+/g, ' ').trim().substring(0, 300);
 
-        let rawDesc = extracted.ogDesc || extracted.desc || '';
+        // 如果没有 AI 绑定，或者出现极端断网，优雅回退原文，不再附加乱七八糟的提示
+        let fallbackDesc = rawDesc || '暂无特征数据';
+        let aiResult = { title: finalTitleRaw, description: fallbackDesc };
 
         if (!env.AI) {
-            return new Response(JSON.stringify({ title: finalTitleRaw, icon: finalIcon, description: rawDesc.substring(0, 100) || '未检测到 AI 算力。' }), { headers: { 'Content-Type': 'application/json', ...corsHeaders } });
+            return new Response(JSON.stringify({ title: finalTitleRaw, icon: finalIcon, description: fallbackDesc }), { headers: { 'Content-Type': 'application/json', ...corsHeaders } });
         }
 
-        // 明确的崩溃警告兜底，如果你看到了这个，说明 Cloudflare 的 AI 节点挂了
-        let aiResult = { title: finalTitleRaw, description: `[AI解析超时] 原文: ${rawDesc.substring(0, 40)}` };
-
         try {
-            // 【换装轻量极速引擎：Qwen-7B，并注入强制翻译指令】
-            const aiResponse = await env.AI.run('@cf/qwen/qwen1.5-7b-chat-awq', { 
+            // 【极速翻译引擎】：更换为高并发的 Llama-3.1，配以无敌的翻译和强制输出规则
+            const aiResponse = await env.AI.run('@cf/meta/llama-3.1-8b-instruct', { 
                 messages: [
-                    { role: 'system', content: `你是一个极客导航站的翻译与总结AI。无论目标网页是英文、日文还是火星文，你都必须将其理解后，重新撰写为纯正的简体中文！
-核心死命令：
-1. 强制中文翻译：绝不允许照搬英文描述！必须翻译并用自己的话总结成中文。如果遇到 "Tailscale"，标题可保留英文，但简介必须是全中文（如：安全好用的虚拟局域网与零信任内网穿透平台）。
-2. 一句话提炼：简介必须严格限制在 15 个汉字以内，绝对禁止多句话拼接，绝不准包含省略号！
-3. 知识库盲猜：如果 TEXT 提示被拦截或为空，立刻忽略源码，仅根据 DOMAIN 域名，直接盲猜出它的中文名和极简中文功能介绍。
-4. 格式锁死：强制只返回纯 JSON，禁止携带Markdown代码块(\`\`\`json)或解释。格式：{"title": "中文名称", "description": "一句全中文极简总结"}` },
-                    { role: 'user', content: `[待解析数据]
-DOMAIN: ${domain}
-TITLE: ${finalTitleRaw}
-DESC: ${rawDesc}
-H1: ${extracted.h1}
-TEXT: ${extracted.bodyText}`.substring(0, 1800) }
+                    { role: 'system', content: `你是一个专业的网页元数据翻译与精简引擎。
+严格指令：
+1. 强制中文翻译：无论用户输入的是英文、日文还是任何语言，你必须将其翻译并总结为纯正的【简体中文】。
+2. 精炼核心名：从 TITLE 中提炼最精简的品牌名。如 "Tailscale | Secure Connectivity..." 只保留 "Tailscale"。
+3. 一句话中文简介：严格将描述翻译并压缩成一句话，限15个汉字以内。绝对禁止照搬英文，绝对禁止包含省略号。
+4. 格式锁死：只允许输出 JSON，严禁 Markdown(如\`\`\`json)。格式：{"title": "中文品牌名", "description": "中文一句话介绍"}` },
+                    { role: 'user', content: `DOMAIN: ${domain}\nTITLE: ${finalTitleRaw}\nINFO: ${safeAIInput || 'No Info'}` }
                 ] 
             });
 
@@ -162,13 +150,14 @@ TEXT: ${extracted.bodyText}`.substring(0, 1800) }
                 if (parsed.description && parsed.description.trim().length > 0) aiResult.description = parsed.description;
             }
         } catch (e) {
-            console.error("Qwen 7B 引擎超时或崩溃:", e);
+            console.error("AI 引擎异常:", e);
+            // 发生异常时，变量 aiResult 自动回退为原生英文描述，不再附加 [AI解析超时] 恶心人
         }
 
         return new Response(JSON.stringify({
             title: aiResult.title || finalTitleRaw,
             icon: finalIcon,
-            description: aiResult.description || '暂无特征数据'
+            description: aiResult.description || fallbackDesc
         }), { headers: { 'Content-Type': 'application/json', ...corsHeaders } });
 
     } catch (globalError) {
