@@ -1,5 +1,6 @@
 /**
- * 37° Nav - 边缘智能靶向解析 API (Llama-3.1 + 内网穿透容错版)
+ * 37° Nav - 边缘智能靶向解析 API (Llama-3.1 终极调教版)
+ * 架构：Cloudflare Pages + HTMLRewriter + Workers AI
  */
 
 export async function onRequest(context) {
@@ -31,21 +32,21 @@ export async function onRequest(context) {
         const domainParts = domain.split('.');
         const rootDomain = domainParts.length > 2 ? domainParts.slice(-2).join('.') : domain;
 
-        // 【新增】判断是否为局域网 IP 或 Localhost
+        // 【屏蔽内网】判断是否为局域网 IP
         const isLocalIP = /^(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[0-1])\.|127\.|localhost)/.test(domain);
 
         const knownSites = {
             'github.com': { title: 'GitHub', icon: 'https://github.githubassets.com/favicons/favicon.svg', description: '全球最大的开源代码托管与版本控制中枢。' },
-            'x.com': { title: 'X (Twitter)', icon: 'https://abs.twimg.com/favicons/twitter.3.ico', description: '全球实时资讯与社交互动网络。' }
+            'x.com': { title: 'X (Twitter)', icon: 'https://abs.twimg.com/favicons/twitter.3.ico', description: '全球实时资讯与社交互动网络。' },
+            'youtube.com': { title: 'YouTube', icon: 'https://www.youtube.com/s/desktop/10c128fa/img/favicon_144x144.png', description: '全球最大的流媒体视频分享与创作者生态。' }
         };
         if (knownSites[domain]) return new Response(JSON.stringify(knownSites[domain]), { headers: { 'Content-Type': 'application/json', ...corsHeaders } });
 
-        // 如果是内网 IP，边缘服务器直接放弃请求网页（因为连不上），直接返回前端要求进行“本地直连穿透”
         if (isLocalIP) {
             return new Response(JSON.stringify({
                 title: domain,
-                icon: "", // 留空，触发前端本地 /favicon.ico 穿透
-                description: '🏠 局域网/本地星体节点，已切换为本地浏览器直连模式。'
+                icon: "", 
+                description: '🏠 局域网星体节点，已启用本地直连穿透。'
             }), { headers: { 'Content-Type': 'application/json', ...corsHeaders } });
         }
 
@@ -69,20 +70,23 @@ export async function onRequest(context) {
             return new Response(JSON.stringify({
                 title: domain.charAt(0).toUpperCase() + domain.slice(1),
                 icon: `https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=${encodeURIComponent(targetUrl)}&size=128`, 
-                description: '⚠️ 目标星体响应超时，强制熔断。'
+                description: '⚠️ 目标星体响应超时或拒绝访问。'
             }), { headers: { 'Content-Type': 'application/json', ...corsHeaders } });
         }
 
-        let extracted = { title: '', ogTitle: '', desc: '', ogDesc: '', bodyText: '', appleIcon: '', icon: '', shortcutIcon: '' };
+        // 【增强抓取】：加入 h1 和 keywords 嗅探，应对没正文的 Vue/React 网站
+        let extracted = { title: '', ogTitle: '', desc: '', ogDesc: '', keywords: '', h1: '', bodyText: '', appleIcon: '', icon: '', shortcutIcon: '' };
 
         const rewriter = new HTMLRewriter()
             .on('title', { text(text) { extracted.title += text.text; } })
+            .on('h1', { text(text) { extracted.h1 += text.text + ' '; } })
             .on('meta', {
                 element(el) {
                     const name = (el.getAttribute('name') || '').toLowerCase();
                     const prop = (el.getAttribute('property') || '').toLowerCase();
                     const content = el.getAttribute('content') || '';
                     if (name === 'description') extracted.desc = content;
+                    if (name === 'keywords') extracted.keywords = content;
                     if (prop === 'og:description') extracted.ogDesc = content;
                     if (prop === 'og:title') extracted.ogTitle = content;
                 }
@@ -97,12 +101,14 @@ export async function onRequest(context) {
                     else if (rel === 'shortcut icon') extracted.shortcutIcon = href;
                 }
             })
-            .on('body', { text(text) { if (extracted.bodyText.length < 5000) extracted.bodyText += text.text + ' '; } });
+            .on('body', { text(text) { if (extracted.bodyText.length < 3000) extracted.bodyText += text.text + ' '; } });
 
         await rewriter.transform(fetchResponse).text();
         extracted.bodyText = extracted.bodyText.replace(/\s+/g, ' ').trim();
         const finalTitleRaw = (extracted.ogTitle || extracted.title).trim() || domain;
+        const rawDesc = extracted.ogDesc || extracted.desc || '';
 
+        // 图标回溯算法
         let finalIcon = extracted.appleIcon || extracted.icon || extracted.shortcutIcon;
         if (finalIcon) {
             try { finalIcon = new URL(finalIcon, targetUrl).href; } 
@@ -111,40 +117,64 @@ export async function onRequest(context) {
             finalIcon = `https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=${encodeURIComponent(targetUrl)}&size=128`;
         }
 
-        if (!env.AI) {
-            return new Response(JSON.stringify({ title: finalTitleRaw, icon: finalIcon, description: (extracted.ogDesc || extracted.desc).substring(0, 150) || '未检测到 AI 算力。' }), { headers: { 'Content-Type': 'application/json', ...corsHeaders } });
+        // 本地逻辑降级处理（防爬虫拦截）
+        const wafKeywords = ['just a moment', 'attention required', 'enable javascript', '验证码', 'cloudflare', 'security check'];
+        if (wafKeywords.some(kw => extracted.bodyText.toLowerCase().includes(kw) || finalTitleRaw.toLowerCase().includes(kw)) || fetchResponse.status === 403) {
+            return new Response(JSON.stringify({ 
+                title: domain.charAt(0).toUpperCase() + domain.slice(1), 
+                icon: finalIcon, 
+                description: '⚠️ 防爬虫屏障激活，请手动覆写节点特征。' 
+            }), { headers: { 'Content-Type': 'application/json', ...corsHeaders } });
         }
 
-        let rawDesc = extracted.ogDesc || extracted.desc || '';
+        if (!env.AI) {
+            return new Response(JSON.stringify({ title: finalTitleRaw, icon: finalIcon, description: rawDesc.substring(0, 150) || '未检测到 AI 算力。' }), { headers: { 'Content-Type': 'application/json', ...corsHeaders } });
+        }
+
         let aiResult = { title: finalTitleRaw, description: rawDesc.substring(0, 100) };
 
         try {
+            // 【终极 AI 调教】：Few-Shot 提示词工程，教 AI 做人
             const aiResponse = await env.AI.run('@cf/meta/llama-3.1-8b-instruct', { 
                 messages: [
-                    { role: 'system', content: `你是一个精通网页元数据的极客。请分析用户提供的网页源码并提取核心信息。
-限制指令：
-1. 只能使用简体中文输出。
-2. 提炼网站核心用途，一针见血，绝不废话，不需要包含“这是一个提供...”之类的字眼。
-3. 只能输出纯JSON格式，严禁包含Markdown代码块、换行符或额外解释。
-4. 严格按照格式：{"title": "精简名称", "description": "高度浓缩中文介绍"}。` },
-                    { role: 'user', content: `TITLE: ${finalTitleRaw}\nDESC: ${rawDesc}\nTEXT: ${extracted.bodyText}`.substring(0, 1500) }
+                    { role: 'system', content: `你是一个最顶级的极客导航网站编辑。你需要从杂乱的网页源码文本中提取出干净的品牌名和一句话简介。
+绝对规则：
+1. Title：必须极度精简！剔除所有的口号、副标题和后缀。例如，如果原标题是"V2EX - 真正好玩的极客社区 - Powered by PB3"，你只能输出"V2EX"。
+2. Description：用一句简短的简体中文人话概括网站功能（不超过30个字）。不能包含"这是一个提供..."的废话。
+3. 如果内容是乱码或完全无关（如 "You need to enable JS"），根据 url 域名凭常识编一个。
+4. 必须且只能输出严格的 JSON，不能有任何其他多余字符或 Markdown 标记。` },
+                    { role: 'user', content: `[参考示例]
+TITLE: 百度一下，你就知道
+DESC: 百度是全球最大的中文搜索引擎、致力于让网民更便捷地获取信息，找到所求。
+JSON: {"title": "百度", "description": "全球最大的中文搜索引擎。"}
+
+[你的任务]
+TITLE: ${finalTitleRaw}
+DESC: ${rawDesc}
+H1: ${extracted.h1}
+TEXT: ${extracted.bodyText}`.substring(0, 2000) }
                 ] 
             });
+
+            // 暴力提取 JSON
             const jsonMatch = (aiResponse.response || '').match(/\{[\s\S]*\}/);
             if (jsonMatch) {
                 const parsed = JSON.parse(jsonMatch[0]);
-                if (parsed.title) aiResult.title = parsed.title;
+                // AI 生成如果太扯淡，降级使用原生抓取的数据
+                if (parsed.title && parsed.title.length < 30) aiResult.title = parsed.title;
                 if (parsed.description) aiResult.description = parsed.description;
             }
-        } catch (e) {}
+        } catch (e) {
+            console.error("AI 提取异常:", e);
+        }
 
         return new Response(JSON.stringify({
             title: aiResult.title || finalTitleRaw,
             icon: finalIcon,
-            description: aiResult.description || '暂无简介'
+            description: aiResult.description || '暂无特征数据'
         }), { headers: { 'Content-Type': 'application/json', ...corsHeaders } });
 
     } catch (globalError) {
-        return new Response(JSON.stringify({ title: "解析异常", icon: "", description: "系统异常。" }), { status: 200, headers: corsHeaders });
+        return new Response(JSON.stringify({ title: "解析异常", icon: "", description: "引擎遇到未知错误。" }), { status: 200, headers: corsHeaders });
     }
 }
