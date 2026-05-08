@@ -1,5 +1,5 @@
 /**
- * 37° Nav - 边缘智能靶向解析 API (跨洋无损抓取 + 旗舰翻译版)
+ * 37° Nav - 边缘智能靶向解析 API (知识库强制唤醒 + 误杀修复版)
  * 架构适配：Cloudflare Pages Functions
  */
 
@@ -14,7 +14,6 @@ export async function onRequest(context) {
 
     if (request.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
 
-    // 提取 URL
     let targetUrl = new URL(request.url).searchParams.get('url');
     if (!targetUrl && request.method === 'POST') {
         const body = await request.json().catch(() => ({}));
@@ -24,12 +23,11 @@ export async function onRequest(context) {
     try {
         if (!targetUrl) throw new Error("Missing URL");
         
-        // 标准化网址
         const siteUrl = targetUrl.startsWith('http') ? targetUrl : `https://${targetUrl}`;
         const domain = new URL(siteUrl).hostname;
         const rootDomain = getRootDomain(domain);
 
-        // 1. 顶级优先级：强制简称白名单
+        // 1. 白名单直通车
         const whiteList = getMandatoryWhiteList();
         if (whiteList[domain] || whiteList[rootDomain]) {
             const data = whiteList[domain] || whiteList[rootDomain];
@@ -42,29 +40,24 @@ export async function onRequest(context) {
             }, null, 2), { headers: corsHeaders });
         }
 
-        // 2. 强力抓取元数据（修复了跨洋请求限制）
+        // 2. 强力抓取元数据
         const meta = await fetchSuperMetadata(siteUrl);
-        
-        // 修复了致命的正则Bug，现在能完美保留所有的外文单词和标点
         const cleanMeta = cleanText(meta);
         
-        // 如果清洗后连2个字母都没有，说明被彻底拦截或网页为空
         const isInvalid = !/[a-zA-Z\u4e00-\u9fa5]{2}/.test(cleanMeta.title + cleanMeta.desc);
 
-        // 3. 双 AI 模型兜底翻译与提炼
+        // 3. 双擎 AI 深度解析
         let aiResult;
         if (!env.AI) throw new Error("AI Engine not bound");
 
         try {
-            // 主引擎：Llama 3.3 70B 旗舰版
             aiResult = await env.AI.run('@cf/meta/llama-3.3-70b-instruct-fp8-fast', {
                 messages: [{ role: 'user', content: getPerfectPrompt(cleanMeta, siteUrl, isInvalid) }],
                 temperature: 0, 
                 max_tokens: 256
             });
         } catch (e) {
-            console.warn("70B 引擎过载，极速切换至 8B 翻译引擎", e);
-            // 备用引擎：Llama 3.1 8B 极速版（更稳定）
+            console.warn("70B 主引擎过载，切换至 8B 极速引擎", e);
             aiResult = await env.AI.run('@cf/meta/llama-3.1-8b-instruct', {
                 messages: [{ role: 'user', content: getPerfectPrompt(cleanMeta, siteUrl, isInvalid) }],
                 temperature: 0, 
@@ -72,7 +65,7 @@ export async function onRequest(context) {
             });
         }
 
-        // 4. 终极 JSON 净化与提取
+        // 4. 提取与净化
         const result = forceValidate(aiResult, domain);
 
         return new Response(JSON.stringify({
@@ -87,8 +80,8 @@ export async function onRequest(context) {
         const domain = extractDomain(targetUrl);
         return new Response(JSON.stringify({
             title: guessPerfectName(domain),
-            description: "网站防爬虫或解析失败",
-            category: "未分类",
+            description: "网站无法访问或防爬虫拦截",
+            category: "探索基地",
             icon: getPerfectFavicon(domain || "default"),
             url: targetUrl
         }, null, 2), { headers: corsHeaders });
@@ -96,7 +89,7 @@ export async function onRequest(context) {
 }
 
 // ==========================================
-// 【1】强制白名单（网民简称锁死）
+// 【1】强制白名单
 // ==========================================
 function getMandatoryWhiteList() {
     return {
@@ -122,17 +115,11 @@ function getMandatoryWhiteList() {
     };
 }
 
-// ==========================================
-// 【2】国内永久图标（favicon.im 代理）
-// ==========================================
 function getPerfectFavicon(domain) {
     if (!domain || domain === 'default') return '';
     return `https://favicon.im/${domain}`;
 }
 
-// ==========================================
-// 【3】跨洋防反爬元数据抓取
-// ==========================================
 async function fetchSuperMetadata(url) {
     const agents = [
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/124.0.0.0 Safari/537.36",
@@ -143,7 +130,6 @@ async function fetchSuperMetadata(url) {
     for (let i = 0; i < 3; i++) {
         try {
             const controller = new AbortController();
-            // 【修复】放宽到 4.5秒，给跨国握手留足时间
             const timeoutId = setTimeout(() => controller.abort(), 4500); 
             
             const res = await fetch(url, { 
@@ -153,7 +139,7 @@ async function fetchSuperMetadata(url) {
                     "Accept-Language": "zh-CN,zh;q=0.9,en-US;q=0.8,en;q=0.7",
                     "Cache-Control": "no-cache"
                 }, 
-                redirect: "follow", // 【修复】必须跟随重定向，否则国外很多网站直接报301空网页
+                redirect: "follow",
                 signal: controller.signal 
             });
             
@@ -166,22 +152,20 @@ async function fetchSuperMetadata(url) {
                     desc: html.match(/name="description"\s+content="(.*?)"/is)?.[1] || html.match(/property="og:description"\s+content="(.*?)"/is)?.[1] || ""
                 };
             }
-        } catch (e) {
-            // 继续重试
-        }
+        } catch (e) {}
     }
     return { title: "", desc: "" };
 }
 
-// ==========================================
-// 【4】翻译指令锁死 Prompt
-// ==========================================
+// 【核心修复】：强化知识库唤醒，即使只有标题没有描述，也要强行盲猜
 function getPerfectPrompt(meta, url, isInvalid) {
+    const isLackingInfo = isInvalid || !meta.desc || meta.desc.trim().length < 5;
+    
     return `你是一个无情的JSON翻译与精简机器。严格执行！只输出纯JSON，无任何其他文字和Markdown标记！
 核心死命令：
-1. 强制中文翻译：无论源数据是英文、日文还是乱码，你必须将其翻译、提炼为纯正的【简体中文】！绝对禁止照搬大段英文！
-2. siteName：网民最常用的极简称呼（限15个字符内）。如果是国外知名项目，保留核心英文（如 Tailscale, Vercel）。如果数据全是乱码，直接看域名盲猜！【绝对禁止无脑添加“站”字！】
-3. siteDesc：绝对的一句话中文，限30个汉字以内。纯人话，一针见血，禁止机器腔（禁止出现"这是一个提供..."）。如果全是乱码，直接根据域名盲猜一句中文简介。
+1. 强制中文翻译：无论源数据是英文还是乱码，必须提炼为纯正的【简体中文】！
+2. siteName：网民最常用的极简称呼（限15字符）。国外知名项目保留核心英文。绝对禁止无脑加“站”字！
+3. siteDesc：【最高优先级】必须是一句话中文简介（限30汉字）。如果提供的数据缺乏描述（Desc为空或无意义），你必须立刻分析网址（${url}），调动你的百科知识库，根据该域名或子域名的知名度自己写一句精准的中文介绍！绝对禁止轻易说“暂无简介”！
 4. siteCategory：必须从 [视频音乐, 论坛, 探索基地, 购物, 知识, 技术, 生活, 通讯, AI人工智能, 未分类] 中选择一个最贴切的。
 
 格式要求：{"siteName":"名字","siteDesc":"中文简介","siteCategory":"分类"}
@@ -190,12 +174,10 @@ function getPerfectPrompt(meta, url, isInvalid) {
 标题: ${meta.title}
 描述: ${meta.desc}
 网址: ${url}
-是否全乱码: ${isInvalid}`;
+是否缺乏有效描述信息: ${isLackingInfo}`;
 }
 
-// ==========================================
-// 【5】终极强制校验
-// ==========================================
+// 【核心修复】：取消对常用词“提供”的误杀，仅智能裁切废话开头
 function forceValidate(aiRes, domain) {
     try {
         let jsonStr = aiRes.response || "";
@@ -208,7 +190,10 @@ function forceValidate(aiRes, domain) {
         const validCategories = ["视频音乐", "论坛", "探索基地", "购物", "知识", "技术", "生活", "通讯", "AI人工智能"];
         data.siteCategory = validCategories.includes(data.siteCategory) ? data.siteCategory : "探索基地";
         
-        if(data.siteDesc.includes("这是一个") || data.siteDesc.includes("提供")) data.siteDesc = "暂无简介";
+        // 智能裁切：不再粗暴地替换为“暂无简介”，而是仅仅把废话开头删掉
+        if(data.siteDesc.startsWith("这是一个") || data.siteDesc.startsWith("这是一款")) {
+            data.siteDesc = data.siteDesc.replace(/^这是(一个|一款)/, "");
+        }
         
         return data;
     } catch (e) {
@@ -216,9 +201,6 @@ function forceValidate(aiRes, domain) {
     }
 }
 
-// ==========================================
-// 【6】首字母大写盲猜兜底（无脑去“站”）
-// ==========================================
 function guessPerfectName(domain) {
     if(!domain) return "未知站点";
     const main = getRootDomain(domain).split(".")[0];
@@ -231,7 +213,6 @@ function getRootDomain(d) {
     return p.length >= 2 ? `${p[p.length-2]}.${p[p.length-1]}` : d; 
 }
 
-// 【修复】：取消变态正则，只清理换行符和多余空格，完美保留原汁原味的外文结构供 AI 翻译
 function cleanText(m) { 
     const c = s => (s || "").replace(/[\r\n\t]+/g, " ").replace(/\s{2,}/g, " ").trim(); 
     return { title: c(m.title), desc: c(m.desc) }; 
