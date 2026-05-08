@@ -46,6 +46,15 @@ export async function onRequest(context) {
         
         const isInvalid = !/[a-zA-Z\u4e00-\u9fa5]{2}/.test(cleanMeta.title + cleanMeta.desc);
 
+        let finalIcon = getPerfectFavicon(domain);
+        if (meta.iconUrl) {
+            try {
+                finalIcon = new URL(meta.iconUrl, siteUrl).href;
+            } catch (e) {
+                // fallback to default
+            }
+        }
+
         // 3. 双擎 AI 深度解析
         let aiResult;
         if (!env.AI) throw new Error("AI Engine not bound");
@@ -72,7 +81,7 @@ export async function onRequest(context) {
             title: result.siteName,
             description: result.siteDesc,
             category: result.siteCategory,
-            icon: getPerfectFavicon(domain),
+            icon: finalIcon,
             url: siteUrl
         }, null, 2), { headers: corsHeaders });
 
@@ -147,14 +156,30 @@ async function fetchSuperMetadata(url) {
 
             if (res.ok) {
                 const html = (await res.text()).substring(0, 50000); 
+
+                const titleMatch = html.match(/<title[^>]*>(.*?)<\/title>/is)?.[1]
+                    || html.match(/property="og:title"\s+content="(.*?)"/is)?.[1]
+                    || html.match(/name="twitter:title"\s+content="(.*?)"/is)?.[1]
+                    || "";
+
+                const descMatch = html.match(/name="description"\s+content="(.*?)"/is)?.[1]
+                    || html.match(/property="og:description"\s+content="(.*?)"/is)?.[1]
+                    || html.match(/name="twitter:description"\s+content="(.*?)"/is)?.[1]
+                    || "";
+
+                const iconMatch = html.match(/<link[^>]*rel="[^"]*(?:icon|apple-touch-icon)[^"]*"[^>]*href="([^"]+)"/is)?.[1]
+                    || html.match(/<link[^>]*href="([^"]+)"[^>]*rel="[^"]*(?:icon|apple-touch-icon)[^"]*"/is)?.[1]
+                    || "";
+
                 return {
-                    title: html.match(/<title[^>]*>(.*?)<\/title>/is)?.[1] || html.match(/property="og:title"\s+content="(.*?)"/is)?.[1] || "",
-                    desc: html.match(/name="description"\s+content="(.*?)"/is)?.[1] || html.match(/property="og:description"\s+content="(.*?)"/is)?.[1] || ""
+                    title: titleMatch,
+                    desc: descMatch,
+                    iconUrl: iconMatch
                 };
             }
         } catch (e) {}
     }
-    return { title: "", desc: "" };
+    return { title: "", desc: "", iconUrl: "" };
 }
 
 // 【核心修复】：强化知识库唤醒，即使只有标题没有描述，也要强行盲猜
@@ -166,7 +191,7 @@ function getPerfectPrompt(meta, url, isInvalid) {
 1. 强制中文翻译：无论源数据是英文还是乱码，必须提炼为纯正的【简体中文】！
 2. siteName：网民最常用的极简称呼（限15字符）。国外知名项目保留核心英文。绝对禁止无脑加“站”字！
 3. siteDesc：【最高优先级】必须是一句话中文简介（限30汉字）。如果提供的数据缺乏描述（Desc为空或无意义），你必须立刻分析网址（${url}），调动你的百科知识库，根据该域名或子域名的知名度自己写一句精准的中文介绍！绝对禁止轻易说“暂无简介”！
-4. siteCategory：必须从 [视频音乐, 论坛, 探索基地, 购物, 知识, 技术, 生活, 通讯, AI人工智能, 未分类] 中选择一个最贴切的。
+4. siteCategory：必须从 [视频音乐, 论坛, 探索基地, 购物, 知识, 技术, 生活, 通讯, AI人工智能, 实用工具, 设计, 未分类] 中选择一个最贴切的。
 
 格式要求：{"siteName":"名字","siteDesc":"中文简介","siteCategory":"分类"}
 
@@ -187,7 +212,7 @@ function forceValidate(aiRes, domain) {
         data.siteName = (data.siteName || guessPerfectName(domain)).slice(0, 20); 
         data.siteDesc = (data.siteDesc || "暂无简介").slice(0, 40);
         
-        const validCategories = ["视频音乐", "论坛", "探索基地", "购物", "知识", "技术", "生活", "通讯", "AI人工智能"];
+        const validCategories = ["视频音乐", "论坛", "探索基地", "购物", "知识", "技术", "生活", "通讯", "AI人工智能", "实用工具", "设计"];
         data.siteCategory = validCategories.includes(data.siteCategory) ? data.siteCategory : "探索基地";
         
         // 智能裁切：不再粗暴地替换为“暂无简介”，而是仅仅把废话开头删掉
@@ -213,8 +238,22 @@ function getRootDomain(d) {
     return p.length >= 2 ? `${p[p.length-2]}.${p[p.length-1]}` : d; 
 }
 
+function decodeHTMLEntities(text) {
+    const entities = {
+        '&#039;': "'",
+        '&quot;': '"',
+        '&amp;': '&',
+        '&lt;': '<',
+        '&gt;': '>',
+        '&nbsp;': ' ',
+        '&mdash;': '—',
+        '&ndash;': '–'
+    };
+    return text.replace(/&#?\w+;/g, match => entities[match] || match);
+}
+
 function cleanText(m) { 
-    const c = s => (s || "").replace(/[\r\n\t]+/g, " ").replace(/\s{2,}/g, " ").trim(); 
+    const c = s => decodeHTMLEntities((s || "").replace(/[\r\n\t]+/g, " ").replace(/\s{2,}/g, " ").trim());
     return { title: c(m.title), desc: c(m.desc) }; 
 }
 
