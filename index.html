@@ -44,13 +44,58 @@
         ::-webkit-scrollbar-thumb { background: #6272A4; border-radius: 3px; }
         ::-webkit-scrollbar-thumb:hover { background: #BD93F9; }
 
-        /* 扁平化动态卡片引擎 */
-        .node-card { border: 1px solid rgba(255, 255, 255, 0.05); transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
-        .node-card:hover { border-color: var(--card-color); transform: translateY(-2px); }
+        /* ========================================================
+           无界全息共振卡片引擎 (Holographic Resonance Engine)
+           ======================================================== */
+        .node-card { 
+            border: 1px solid rgba(255, 255, 255, 0.04); 
+            background: rgba(68, 71, 90, 0.25);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+            position: relative;
+            overflow: hidden;
+            border-radius: 14px;
+        }
+        
+        /* 漫反射背景：让整个卡片染上图标的灵魂色 */
+        .node-card::before {
+            content: ''; 
+            position: absolute; 
+            inset: 0;
+            background: var(--card-color);
+            opacity: 0; 
+            transition: opacity 0.5s ease;
+            pointer-events: none; 
+            z-index: 0;
+        }
+        .node-card:hover::before { 
+            opacity: 0.08; /* 极度克制的微光渗透 */
+        }
+        
+        /* 卡片悬浮状态 */
+        .node-card:hover { 
+            border-color: rgba(255, 255, 255, 0.15); 
+            transform: translateY(-3px); 
+            box-shadow: 0 12px 30px -10px var(--card-color);
+        }
         .node-card:hover .node-title { color: var(--card-color); }
-        .node-icon-box { color: var(--card-color); transition: all 0.3s ease; }
+        
+        /* 图标透射阴影：摒弃死板盒子，轮廓自发光 */
+        .card-icon {
+            width: 46px; 
+            height: 46px;
+            object-fit: contain; 
+            border-radius: 12px;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            filter: drop-shadow(0 4px 6px rgba(0,0,0,0.5));
+            position: relative; 
+            z-index: 1;
+        }
+        .node-card:hover .card-icon {
+            transform: scale(1.1) translateY(-2px);
+            filter: drop-shadow(0 8px 16px var(--card-color));
+        }
 
-        /* 自定义搜索引擎下拉菜单过渡层 */
+        /* 搜索组件 */
         .search-dropdown-wrapper { position: relative; }
         .search-dropdown-menu { position: absolute; top: 100%; left: -5px; padding-top: 10px; display: none; z-index: 100;}
         .search-dropdown-wrapper:hover .search-dropdown-menu { display: block; }
@@ -58,7 +103,7 @@
         .search-opt { padding: 8px 15px; cursor: pointer; color: #6272A4; transition: all 0.2s; display: flex; justify-content: center;}
         .search-opt:hover { background: #44475A; color: #8BE9FD; }
 
-        /* 模态框系统 */
+        /* 赛博弹窗系统 */
         .cyber-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8); backdrop-filter: blur(5px); display: flex; align-items: center; justify-content: center; z-index: 9999; opacity: 0; pointer-events: none; transition: opacity 0.2s ease; }
         .cyber-overlay.active { opacity: 1; pointer-events: all; }
         .cyber-modal { position: relative; background: #282A36; border: 1px solid #BD93F9; box-shadow: 0 0 30px rgba(189, 147, 249, 0.2); border-radius: 12px; padding: 25px; width: 90%; max-width: 400px; transform: scale(0.95); transition: transform 0.2s ease; }
@@ -96,10 +141,8 @@
             </div>
 
             <div class="flex items-center gap-3 flex-shrink-0">
-                
                 <div class="hidden lg:flex items-center bg-dracula-dark/80 border border-dracula-current rounded-lg p-1 transition-colors focus-within:border-dracula-purple focus-within:bg-dracula-dark">
                     <form id="web-search-form" class="flex items-center border-r border-dracula-comment/40 px-1 relative">
-                        
                         <div class="search-dropdown-wrapper">
                             <div class="flex items-center gap-1 cursor-pointer text-dracula-comment hover:text-dracula-cyan px-2 py-1 transition-colors">
                                 <i id="current-engine-icon" class="fa-brands fa-google text-sm"></i>
@@ -113,11 +156,9 @@
                                 </div>
                             </div>
                         </div>
-
                         <input type="text" id="web-search-input" placeholder="Search..." required class="bg-transparent text-dracula-fg text-sm outline-none px-2 w-20 focus:w-32 transition-all placeholder-dracula-comment">
                         <button type="submit" class="text-dracula-comment hover:text-dracula-pink pr-1 transition-colors"><i class="fa-solid fa-arrow-right-to-bracket"></i></button>
                     </form>
-                    
                     <div class="flex items-center pl-2 pr-1 relative">
                         <i class="fa-solid fa-robot text-dracula-comment text-sm"></i>
                         <input type="text" id="ai-filter-input" placeholder="AI Filter..." class="bg-transparent text-dracula-fg text-sm outline-none px-2 w-24 focus:w-36 transition-all placeholder-dracula-comment">
@@ -288,7 +329,9 @@
             }
         }
 
-        // 【重构核心：无界光晕视觉引擎】
+        // ==========================================
+        // UI重构：渲染脱离束缚的全息图标
+        // ==========================================
         function buildGrid(nodesArray) {
             const grid = document.createElement('div');
             grid.className = 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6';
@@ -299,15 +342,15 @@
                 
                 const fallbackHex = getHashColor(link.title || link.url);
                 card.style.setProperty('--card-color', fallbackHex);
-                card.className = `node-card relative bg-dracula-current/30 hover:bg-dracula-current/60 backdrop-blur-md rounded-xl p-4 flex items-center gap-4 group w-full min-w-0 overflow-hidden block`;
+                card.className = `node-card p-4 flex items-center gap-4 group w-full min-w-0 block`;
                 
                 let iconStr = (link.icon || '').trim();
                 let iconHTML = '';
 
+                // 完全移除了外层包裹框，直接渲染图标主体
                 if (iconStr.startsWith('fa-')) {
-                    iconHTML = `<i class="${iconStr} node-icon-box text-[28px] drop-shadow-md group-hover:scale-110 transition-transform duration-300"></i>`;
-                } 
-                else {
+                    iconHTML = `<i class="${iconStr} card-icon flex items-center justify-center text-[34px] text-dracula-fg"></i>`;
+                } else {
                     let targetImgUrl = iconStr;
                     if (!targetImgUrl) {
                         try { targetImgUrl = new URL(link.url).origin + '/favicon.ico'; } 
@@ -315,9 +358,10 @@
                     }
 
                     if (targetImgUrl) {
+                        // 使用 bg-white/5 加微小边框，模拟高级的玻璃容器承载底色图标
                         iconHTML = `
-                            <img src="${targetImgUrl}" loading="lazy" alt="icon" class="w-full h-full rounded-lg object-contain drop-shadow-md group-hover:scale-110 transition-transform duration-300" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
-                            <i class="fa-solid fa-globe node-icon-box text-[28px] hidden group-hover:scale-110 transition-transform duration-300"></i>`;
+                            <img src="${targetImgUrl}" loading="lazy" alt="icon" class="card-icon bg-white/5 p-1 ring-1 ring-white/10" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                            <i class="fa-solid fa-globe card-icon hidden items-center justify-center text-[34px] text-dracula-fg"></i>`;
 
                         const hiddenImg = new Image();
                         hiddenImg.crossOrigin = "Anonymous";
@@ -338,24 +382,21 @@
                         };
                         hiddenImg.src = targetImgUrl;
                     } else {
-                        iconHTML = `<i class="fa-solid fa-globe node-icon-box text-[28px] drop-shadow-md group-hover:scale-110 transition-transform duration-300"></i>`;
+                        iconHTML = `<i class="fa-solid fa-globe card-icon flex items-center justify-center text-[34px] text-dracula-fg"></i>`;
                     }
                 }
 
                 const adminHtml = isAdmin ? `
-                    <div class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                    <div class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-20">
                         <button onclick="deleteNode(event, ${link.id}, '${link.title.replace(/'/g, "\\'")}')" class="text-xs text-dracula-red hover:text-white bg-dracula-dark border border-dracula-red/30 hover:bg-dracula-red px-2 py-1 rounded transition-colors"><i class="fa-solid fa-trash"></i></button>
                     </div>` : '';
 
                 card.innerHTML = `
                     ${adminHtml}
-                    <div class="relative flex-shrink-0 w-12 h-12 flex items-center justify-center">
-                        <div class="absolute inset-0 opacity-10 group-hover:opacity-30 blur-lg rounded-full transition-opacity duration-500" style="background-color: var(--card-color);"></div>
-                        <div class="relative z-10 w-10 h-10 flex items-center justify-center">
-                            ${iconHTML}
-                        </div>
+                    <div class="relative flex-shrink-0 flex items-center justify-center z-10 w-12 h-12">
+                        ${iconHTML}
                     </div>
-                    <div class="flex-1 min-w-0 ml-2">
+                    <div class="flex-1 min-w-0 ml-1 z-10 relative">
                         <h3 class="node-title text-base font-bold text-dracula-fg truncate transition-colors">${link.title}</h3>
                         <p class="text-xs text-dracula-comment truncate mt-1">${link.description || '暂无特征数据'}</p>
                     </div>
