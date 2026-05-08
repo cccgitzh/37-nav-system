@@ -1,5 +1,5 @@
 /**
- * 37° Nav - 边缘智能靶向解析 API (Qwen-14B + 主观总结提炼版)
+ * 37° Nav - 边缘智能靶向解析 API (Qwen-7B 极速版 + 强制中文翻译防坠毁)
  * 架构：Cloudflare Pages + HTMLRewriter + Workers AI
  */
 
@@ -32,7 +32,6 @@ export async function onRequest(context) {
         const domainParts = domain.split('.');
         const rootDomain = domainParts.length > 2 ? domainParts.slice(-2).join('.') : domain;
 
-        // 判断是否为局域网/本地 IP
         const isLocalIP = /^(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[0-1])\.|127\.|localhost)/.test(domain);
 
         // 星图秒开知识库
@@ -44,11 +43,11 @@ export async function onRequest(context) {
             'bilibili.com': { title: 'B站 (Bilibili)', icon: 'https://www.bilibili.com/favicon.ico', description: '国内年轻人的弹幕视频社区。' },
             'v2ex.com': { title: 'V站 (V2EX)', icon: 'https://www.v2ex.com/favicon.ico', description: '程序员与创意工作者的极客社区。' },
             'nodeseek.com': { title: 'NodeSeek', icon: 'https://www.nodeseek.com/favicon.ico', description: '全球主机玩家与极客交流地。' },
-            'mail.google.com': { title: '谷歌邮箱 (Gmail)', icon: 'https://ssl.gstatic.com/ui/v1/icons/mail/rfr/gmail.ico', description: '安全高效的免费电子邮件服务。' }
+            'mail.google.com': { title: '谷歌邮箱 (Gmail)', icon: 'https://ssl.gstatic.com/ui/v1/icons/mail/rfr/gmail.ico', description: '安全高效的免费电子邮件服务。' },
+            'dash.cloudflare.com': { title: 'CF 控制台', icon: 'https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://cloudflare.com&size=128', description: '全球领先的边缘计算与CDN平台。' }
         };
         if (knownSites[domain]) return new Response(JSON.stringify(knownSites[domain]), { headers: { 'Content-Type': 'application/json', ...corsHeaders } });
 
-        // 内网直连穿透逻辑
         if (isLocalIP) {
             return new Response(JSON.stringify({
                 title: domain,
@@ -126,50 +125,44 @@ export async function onRequest(context) {
             extracted.bodyText = "WAF_BLOCKED_OR_EMPTY"; 
         }
 
-        // 【核心修复】彻底废除了物理截断 + '...'，保持原文本交由前台 CSS 截断，或供 AI 重新阅读
         let rawDesc = extracted.ogDesc || extracted.desc || '';
 
         if (!env.AI) {
-            // 没有 AI 算力时，直接返回提取的原文描述，最大长度截取防崩溃，无省略号
             return new Response(JSON.stringify({ title: finalTitleRaw, icon: finalIcon, description: rawDesc.substring(0, 100) || '未检测到 AI 算力。' }), { headers: { 'Content-Type': 'application/json', ...corsHeaders } });
         }
 
-        let aiResult = { title: finalTitleRaw, description: rawDesc.substring(0, 100) };
+        // 明确的崩溃警告兜底，如果你看到了这个，说明 Cloudflare 的 AI 节点挂了
+        let aiResult = { title: finalTitleRaw, description: `[AI解析超时] 原文: ${rawDesc.substring(0, 40)}` };
 
         try {
-            // 【终极 AI 重新总结协议】：强制要求 AI “用自己的话” 撰写完整中文短句
-            const aiResponse = await env.AI.run('@cf/qwen/qwen1.5-14b-chat-awq', { 
+            // 【换装轻量极速引擎：Qwen-7B，并注入强制翻译指令】
+            const aiResponse = await env.AI.run('@cf/qwen/qwen1.5-7b-chat-awq', { 
                 messages: [
-                    { role: 'system', content: `你是一个极客导航站的智能AI编辑。你需要根据网页数据，自己思考并编写纯净的中文网站名称和极简简介。
-核心规则：
-1. 强制中文化与简称：优先使用国内网民通用称呼！如 "Google Drive" 输出 "谷歌云盘"，"Gmail" 输出 "谷歌邮箱"。
-2. 主观提炼（最重要）：你必须用自己的话，把冗长的介绍或英文【重新总结】成一句完整的中文！绝对禁止生硬地截断长句！绝对不能出现省略号！
-【反面错误示例】："A service navigation hub..." (英文未翻译且被机械截断，错误)
-【反面错误示例】："Google的云端硬盘。免费15GB..." (多句话拼接且没写完，错误)
-【正面正确示例】："专为主机玩家打造的交流社区" (完全由你自己总结的一句连贯中文，正确)
-3. 盲猜兜底：如果 TEXT 提示被拦截或为空，必须忽略源码，直接根据 DOMAIN 自己盲猜写出中文名和完整短句！
-4. 强制返回纯 JSON，禁止包含任何 Markdown 符号或多余解释。格式：{"title": "中文名", "description": "你总结的中文完整短句"}` },
+                    { role: 'system', content: `你是一个极客导航站的翻译与总结AI。无论目标网页是英文、日文还是火星文，你都必须将其理解后，重新撰写为纯正的简体中文！
+核心死命令：
+1. 强制中文翻译：绝不允许照搬英文描述！必须翻译并用自己的话总结成中文。如果遇到 "Tailscale"，标题可保留英文，但简介必须是全中文（如：安全好用的虚拟局域网与零信任内网穿透平台）。
+2. 一句话提炼：简介必须严格限制在 15 个汉字以内，绝对禁止多句话拼接，绝不准包含省略号！
+3. 知识库盲猜：如果 TEXT 提示被拦截或为空，立刻忽略源码，仅根据 DOMAIN 域名，直接盲猜出它的中文名和极简中文功能介绍。
+4. 格式锁死：强制只返回纯 JSON，禁止携带Markdown代码块(\`\`\`json)或解释。格式：{"title": "中文名称", "description": "一句全中文极简总结"}` },
                     { role: 'user', content: `[待解析数据]
 DOMAIN: ${domain}
 TITLE: ${finalTitleRaw}
 DESC: ${rawDesc}
 H1: ${extracted.h1}
-TEXT: ${extracted.bodyText}`.substring(0, 2000) }
+TEXT: ${extracted.bodyText}`.substring(0, 1800) }
                 ] 
             });
 
-            // 提取净化 JSON
             let responseText = aiResponse.response || '';
             const jsonMatch = responseText.match(/\{[\s\S]*\}/);
             
             if (jsonMatch) {
                 const parsed = JSON.parse(jsonMatch[0]);
                 if (parsed.title && parsed.title.length < 30) aiResult.title = parsed.title;
-                // 如果 AI 生成了非空的简介，则覆盖默认简介
                 if (parsed.description && parsed.description.trim().length > 0) aiResult.description = parsed.description;
             }
         } catch (e) {
-            console.error("Qwen 引擎提取异常:", e);
+            console.error("Qwen 7B 引擎超时或崩溃:", e);
         }
 
         return new Response(JSON.stringify({
