@@ -1,5 +1,5 @@
 /**
- * 37° Nav - 边缘智能靶向解析 API (Qwen-14B + 强制中文化 + 知识库盲猜穿透版)
+ * 37° Nav - 边缘智能靶向解析 API (Qwen-14B + 极限一句话简介版)
  * 架构：Cloudflare Pages + HTMLRewriter + Workers AI
  */
 
@@ -35,16 +35,16 @@ export async function onRequest(context) {
         // 判断是否为局域网/本地 IP
         const isLocalIP = /^(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[0-1])\.|127\.|localhost)/.test(domain);
 
-        // 星图秒开知识库（高频大站直接短路，省去 AI 耗时）
+        // 星图秒开知识库（同样精简了这里的自带描述，保持极简风）
         const knownSites = {
-            'github.com': { title: 'GitHub', icon: 'https://github.githubassets.com/favicons/favicon.svg', description: '全球最大的开源代码托管与程序员社区。' },
+            'github.com': { title: 'GitHub', icon: 'https://github.githubassets.com/favicons/favicon.svg', description: '全球最大开源代码托管中枢。' },
             'x.com': { title: '推特 (X)', icon: 'https://abs.twimg.com/favicons/twitter.3.ico', description: '全球实时社交与资讯网络。' },
             'twitter.com': { title: '推特 (X)', icon: 'https://abs.twimg.com/favicons/twitter.3.ico', description: '全球实时社交与资讯网络。' },
             'youtube.com': { title: '油管 (YouTube)', icon: 'https://www.youtube.com/s/desktop/10c128fa/img/favicon_144x144.png', description: '全球最大的流媒体视频生态。' },
-            'bilibili.com': { title: 'B站 (Bilibili)', icon: 'https://www.bilibili.com/favicon.ico', description: '国内最大的年轻人弹幕视频网站。' },
-            'v2ex.com': { title: 'V站 (V2EX)', icon: 'https://www.v2ex.com/favicon.ico', description: '创意工作者与程序员的极客社区。' },
-            'nodeseek.com': { title: 'NodeSeek', icon: 'https://www.nodeseek.com/favicon.ico', description: '极客与开发者交流社区，全球主机玩家聚集地。' },
-            'mail.google.com': { title: '谷歌邮箱 (Gmail)', icon: 'https://ssl.gstatic.com/ui/v1/icons/mail/rfr/gmail.ico', description: 'Google 提供的免费、安全且高度集成的电子邮件服务。' }
+            'bilibili.com': { title: 'B站 (Bilibili)', icon: 'https://www.bilibili.com/favicon.ico', description: '国内年轻人的弹幕视频社区。' },
+            'v2ex.com': { title: 'V站 (V2EX)', icon: 'https://www.v2ex.com/favicon.ico', description: '程序员与创意工作者的极客社区。' },
+            'nodeseek.com': { title: 'NodeSeek', icon: 'https://www.nodeseek.com/favicon.ico', description: '全球主机玩家与极客交流地。' },
+            'mail.google.com': { title: '谷歌邮箱 (Gmail)', icon: 'https://ssl.gstatic.com/ui/v1/icons/mail/rfr/gmail.ico', description: '安全高效的免费电子邮件服务。' }
         };
         if (knownSites[domain]) return new Response(JSON.stringify(knownSites[domain]), { headers: { 'Content-Type': 'application/json', ...corsHeaders } });
 
@@ -53,7 +53,7 @@ export async function onRequest(context) {
             return new Response(JSON.stringify({
                 title: domain,
                 icon: "", 
-                description: '🏠 局域网/本地星体节点，已启用本地直连。'
+                description: '🏠 本地星体节点，已启用直连。'
             }), { headers: { 'Content-Type': 'application/json', ...corsHeaders } });
         }
 
@@ -74,7 +74,7 @@ export async function onRequest(context) {
             clearTimeout(timeoutId);
         } catch (e) {
             clearTimeout(timeoutId);
-            fetchResponse = { status: 504 }; // 标记为超时，交由 AI 盲猜
+            fetchResponse = { status: 504 }; 
         }
 
         let extracted = { title: '', ogTitle: '', desc: '', ogDesc: '', h1: '', bodyText: '', appleIcon: '', icon: '', shortcutIcon: '' };
@@ -119,8 +119,7 @@ export async function onRequest(context) {
             finalIcon = `https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=${encodeURIComponent(targetUrl)}&size=128`;
         }
 
-        // 【重构】：检测到防爬虫或页面为空时，不再提前报错返回！
-        // 而是将内容标记为 WAF_BLOCKED，逼迫 AI 使用内置常识进行“盲猜”。
+        // 防爬虫检测
         const wafKeywords = ['just a moment', 'attention required', 'enable javascript', '验证码', 'cloudflare', 'security check'];
         const isBlocked = fetchResponse.status !== 200 || wafKeywords.some(kw => extracted.bodyText.toLowerCase().includes(kw) || finalTitleRaw.toLowerCase().includes(kw));
         
@@ -128,23 +127,28 @@ export async function onRequest(context) {
             extracted.bodyText = "WAF_BLOCKED_OR_EMPTY"; 
         }
 
+        // 默认兜底描述，强行切断到最大 20 个字符
+        let rawDesc = extracted.ogDesc || extracted.desc || '';
+        let fallbackDesc = rawDesc.length > 20 ? rawDesc.substring(0, 20) + '...' : rawDesc;
+
         if (!env.AI) {
-            return new Response(JSON.stringify({ title: finalTitleRaw, icon: finalIcon, description: (extracted.ogDesc || extracted.desc).substring(0, 150) || '未检测到 AI 算力。' }), { headers: { 'Content-Type': 'application/json', ...corsHeaders } });
+            return new Response(JSON.stringify({ title: finalTitleRaw, icon: finalIcon, description: fallbackDesc || '未检测到 AI 算力。' }), { headers: { 'Content-Type': 'application/json', ...corsHeaders } });
         }
 
-        let rawDesc = extracted.ogDesc || extracted.desc || '';
-        let aiResult = { title: finalTitleRaw, description: rawDesc.substring(0, 100) };
+        let aiResult = { title: finalTitleRaw, description: fallbackDesc };
 
         try {
-            // 【究极 Prompt 洗脑】：强制本土化中文 + 强制域名盲猜
+            // 【终极 Prompt 升级：正反面对比教化 + 物理字数锁死】
             const aiResponse = await env.AI.run('@cf/qwen/qwen1.5-14b-chat-awq', { 
                 messages: [
-                    { role: 'system', content: `你是一个极客导航站的智能AI。你需要根据网页数据或域名，输出纯净的中文网站名称和简介。
+                    { role: 'system', content: `你是一个极客导航站的智能AI。你需要根据网页数据或域名，输出纯净的中文网站名称和极简简介。
 核心规则：
-1. 强制中文化与口语化：优先使用国内网民的通用称呼！遇到 "Gmail" 必须输出 "谷歌邮箱"，"Google Drive" 输出 "谷歌云盘"，"Instagram" 输出 "推特/Ins" 等。绝对不要照搬长串的英文。
-2. 全中文简介：一针见血总结核心功能，限制在 30 字以内，说人话。
-3. 知识库兜底（最重要）：如果 TEXT 是 "WAF_BLOCKED_OR_EMPTY" 或者纯乱码，这说明我们的爬虫被拦截了。此时你【必须】忽略源码，直接看着 DOMAIN（域名），调用你的大模型知识库，自己写出这个域名的中文名和中文简介！绝对不允许输出“暂无数据”或“防爬虫”。
-4. 强制返回纯 JSON，禁止任何 Markdown 符号(如\`\`\`json)或多余解释。格式：{"title": "中文名", "description": "中文简介"}` },
+1. 强制中文化与简称：优先使用国内网民通用称呼！如 "Google Drive" 输出 "谷歌云盘"，"Gmail" 输出 "谷歌邮箱"。
+2. 极限字数限制（最重要）：简介必须是【绝对的一句话总结】，严格限制在 15 个汉字以内！不准出现标点符号分割的多句话。
+【反面错误示例】："Google的云端硬盘。可以存储、访问和共享文件。免费15GB。" (包含多句话，太啰嗦，错误)
+【正面正确示例】："安全可靠的云端存储服务" (极简单句，正确)
+3. 知识库盲猜兜底：如果 TEXT 提示被拦截或为空，你必须忽略源码，直接根据 DOMAIN 自己写出中文名和极简中文简介！
+4. 强制返回纯 JSON，禁止包含任何 Markdown 符号或多余解释。格式：{"title": "中文名", "description": "极简中文简介"}` },
                     { role: 'user', content: `[待解析数据]
 DOMAIN: ${domain}
 TITLE: ${finalTitleRaw}
@@ -154,7 +158,7 @@ TEXT: ${extracted.bodyText}`.substring(0, 2000) }
                 ] 
             });
 
-            // 暴力提取并净化 JSON
+            // 提取净化 JSON
             let responseText = aiResponse.response || '';
             const jsonMatch = responseText.match(/\{[\s\S]*\}/);
             
