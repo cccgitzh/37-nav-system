@@ -1,5 +1,5 @@
 /**
- * 37° Nav - 边缘智能靶向解析 API (Qwen-14B + 极限一句话简介版)
+ * 37° Nav - 边缘智能靶向解析 API (Qwen-14B + 主观总结提炼版)
  * 架构：Cloudflare Pages + HTMLRewriter + Workers AI
  */
 
@@ -35,7 +35,7 @@ export async function onRequest(context) {
         // 判断是否为局域网/本地 IP
         const isLocalIP = /^(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[0-1])\.|127\.|localhost)/.test(domain);
 
-        // 星图秒开知识库（同样精简了这里的自带描述，保持极简风）
+        // 星图秒开知识库
         const knownSites = {
             'github.com': { title: 'GitHub', icon: 'https://github.githubassets.com/favicons/favicon.svg', description: '全球最大开源代码托管中枢。' },
             'x.com': { title: '推特 (X)', icon: 'https://abs.twimg.com/favicons/twitter.3.ico', description: '全球实时社交与资讯网络。' },
@@ -119,7 +119,6 @@ export async function onRequest(context) {
             finalIcon = `https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=${encodeURIComponent(targetUrl)}&size=128`;
         }
 
-        // 防爬虫检测
         const wafKeywords = ['just a moment', 'attention required', 'enable javascript', '验证码', 'cloudflare', 'security check'];
         const isBlocked = fetchResponse.status !== 200 || wafKeywords.some(kw => extracted.bodyText.toLowerCase().includes(kw) || finalTitleRaw.toLowerCase().includes(kw));
         
@@ -127,28 +126,29 @@ export async function onRequest(context) {
             extracted.bodyText = "WAF_BLOCKED_OR_EMPTY"; 
         }
 
-        // 默认兜底描述，强行切断到最大 20 个字符
+        // 【核心修复】彻底废除了物理截断 + '...'，保持原文本交由前台 CSS 截断，或供 AI 重新阅读
         let rawDesc = extracted.ogDesc || extracted.desc || '';
-        let fallbackDesc = rawDesc.length > 20 ? rawDesc.substring(0, 20) + '...' : rawDesc;
 
         if (!env.AI) {
-            return new Response(JSON.stringify({ title: finalTitleRaw, icon: finalIcon, description: fallbackDesc || '未检测到 AI 算力。' }), { headers: { 'Content-Type': 'application/json', ...corsHeaders } });
+            // 没有 AI 算力时，直接返回提取的原文描述，最大长度截取防崩溃，无省略号
+            return new Response(JSON.stringify({ title: finalTitleRaw, icon: finalIcon, description: rawDesc.substring(0, 100) || '未检测到 AI 算力。' }), { headers: { 'Content-Type': 'application/json', ...corsHeaders } });
         }
 
-        let aiResult = { title: finalTitleRaw, description: fallbackDesc };
+        let aiResult = { title: finalTitleRaw, description: rawDesc.substring(0, 100) };
 
         try {
-            // 【终极 Prompt 升级：正反面对比教化 + 物理字数锁死】
+            // 【终极 AI 重新总结协议】：强制要求 AI “用自己的话” 撰写完整中文短句
             const aiResponse = await env.AI.run('@cf/qwen/qwen1.5-14b-chat-awq', { 
                 messages: [
-                    { role: 'system', content: `你是一个极客导航站的智能AI。你需要根据网页数据或域名，输出纯净的中文网站名称和极简简介。
+                    { role: 'system', content: `你是一个极客导航站的智能AI编辑。你需要根据网页数据，自己思考并编写纯净的中文网站名称和极简简介。
 核心规则：
 1. 强制中文化与简称：优先使用国内网民通用称呼！如 "Google Drive" 输出 "谷歌云盘"，"Gmail" 输出 "谷歌邮箱"。
-2. 极限字数限制（最重要）：简介必须是【绝对的一句话总结】，严格限制在 15 个汉字以内！不准出现标点符号分割的多句话。
-【反面错误示例】："Google的云端硬盘。可以存储、访问和共享文件。免费15GB。" (包含多句话，太啰嗦，错误)
-【正面正确示例】："安全可靠的云端存储服务" (极简单句，正确)
-3. 知识库盲猜兜底：如果 TEXT 提示被拦截或为空，你必须忽略源码，直接根据 DOMAIN 自己写出中文名和极简中文简介！
-4. 强制返回纯 JSON，禁止包含任何 Markdown 符号或多余解释。格式：{"title": "中文名", "description": "极简中文简介"}` },
+2. 主观提炼（最重要）：你必须用自己的话，把冗长的介绍或英文【重新总结】成一句完整的中文！绝对禁止生硬地截断长句！绝对不能出现省略号！
+【反面错误示例】："A service navigation hub..." (英文未翻译且被机械截断，错误)
+【反面错误示例】："Google的云端硬盘。免费15GB..." (多句话拼接且没写完，错误)
+【正面正确示例】："专为主机玩家打造的交流社区" (完全由你自己总结的一句连贯中文，正确)
+3. 盲猜兜底：如果 TEXT 提示被拦截或为空，必须忽略源码，直接根据 DOMAIN 自己盲猜写出中文名和完整短句！
+4. 强制返回纯 JSON，禁止包含任何 Markdown 符号或多余解释。格式：{"title": "中文名", "description": "你总结的中文完整短句"}` },
                     { role: 'user', content: `[待解析数据]
 DOMAIN: ${domain}
 TITLE: ${finalTitleRaw}
@@ -165,7 +165,8 @@ TEXT: ${extracted.bodyText}`.substring(0, 2000) }
             if (jsonMatch) {
                 const parsed = JSON.parse(jsonMatch[0]);
                 if (parsed.title && parsed.title.length < 30) aiResult.title = parsed.title;
-                if (parsed.description) aiResult.description = parsed.description;
+                // 如果 AI 生成了非空的简介，则覆盖默认简介
+                if (parsed.description && parsed.description.trim().length > 0) aiResult.description = parsed.description;
             }
         } catch (e) {
             console.error("Qwen 引擎提取异常:", e);
