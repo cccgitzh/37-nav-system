@@ -71,6 +71,7 @@ export async function onRequest(context) {
         try {
             aiResult = await env.AI.run('@cf/meta/llama-3.3-70b-instruct-fp8-fast', {
                 messages: [{ role: 'user', content: getPerfectPrompt(cleanMeta, siteUrl, isInvalid) }],
+                response_format: { type: "json_object" },
                 temperature: 0, 
                 max_tokens: 256
             });
@@ -78,6 +79,7 @@ export async function onRequest(context) {
             console.warn("70B 引擎过载，极速切换至 8B", e);
             aiResult = await env.AI.run('@cf/meta/llama-3.1-8b-instruct', {
                 messages: [{ role: 'user', content: getPerfectPrompt(cleanMeta, siteUrl, isInvalid) }],
+                response_format: { type: "json_object" },
                 temperature: 0, 
                 max_tokens: 256
             });
@@ -159,9 +161,6 @@ async function fetchSuperMetadata(url) {
     
     for (let i = 0; i < 3; i++) {
         try {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 4500); 
-            
             const res = await fetch(url, { 
                 headers: { 
                     "User-Agent": agents[i],
@@ -170,10 +169,8 @@ async function fetchSuperMetadata(url) {
                     "Cache-Control": "no-cache"
                 }, 
                 redirect: "follow",
-                signal: controller.signal 
+                signal: AbortSignal.timeout(4500)
             });
-            
-            clearTimeout(timeoutId);
 
             if (res.ok) {
                 // 使用 Cloudflare 原生 HTMLRewriter，无视任何属性排序错乱
@@ -230,9 +227,9 @@ function getPerfectPrompt(meta, url, isInvalid) {
    请直接根据网址（${url}）和它的知名度，从你的知识库中写一句精准的中文介绍！绝对不要输出"暂无简介"！
 4. siteCategory：必须从 [视频音乐, 论坛, 探索基地, 购物, 知识, 技术, 生活, 通讯, AI人工智能, 实用工具, 设计, 开发者] 中选择一个最贴切的。
    如果没有合适的，可以自行发明一个2到4个字的精准中文分类。
+5. 必须返回合法的JSON对象。
 
-输出格式严格如下：
-{"siteName": "网站名称", "siteDesc": "一句话中文简介", "siteCategory": "分类"}
+Respond ONLY with a valid JSON object matching this schema: {"siteName": "网站名称", "siteDesc": "一句话中文简介", "siteCategory": "分类"}
 
 待处理源数据：
 标题: ${meta.title}
@@ -246,19 +243,19 @@ function getPerfectPrompt(meta, url, isInvalid) {
 // ==========================================
 function forceValidate(aiRes, domain) {
     try {
-        let jsonStr = aiRes.response || "";
+        const jsonStr = aiRes.response || "";
+        const start = jsonStr.indexOf('{');
+        const end = jsonStr.lastIndexOf('}');
 
-        // 尝试修复被截断或带有奇怪字符的JSON
-        let jsonMatch = jsonStr.match(/\{[\s\S]*\}/);
-        if (!jsonMatch) throw new Error("No JSON found");
+        if (start === -1 || end === -1 || end < start) {
+            throw new Error("No JSON structure found in response");
+        }
 
         let data;
         try {
-            data = JSON.parse(jsonMatch[0]);
-        } catch(e) {
-            // 如果解析失败，尝试去掉可能的尾部垃圾字符
-            let cleanStr = jsonMatch[0].replace(/}[^}]*$/, '}');
-            data = JSON.parse(cleanStr);
+            data = JSON.parse(jsonStr.slice(start, end + 1));
+        } catch (e) {
+            throw new Error("Invalid JSON structure");
         }
         
         data.siteName = (data.siteName || guessPerfectName(domain)).slice(0, 20); 
