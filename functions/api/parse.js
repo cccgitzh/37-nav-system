@@ -1,6 +1,8 @@
 /**
  * 37° Nav - 边缘智能靶向解析 API (HTMLRewriter 引擎重构版)
  * 架构适配：Cloudflare Pages Functions
+ * 最后更新：2026-05-10
+ * 优化内容：解决Git冲突、整合双分支特性、优化favicon获取、增强错误处理
  */
 
 export async function onRequest(context) {
@@ -39,16 +41,30 @@ export async function onRequest(context) {
                 category: data.siteCategory,
                 icon: getPerfectFavicon(domain),
                 url: siteUrl
-            }, null, 2), { headers: corsHeaders });
+            }, null, 2), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
         }
 
         // 2. 启用真正的 DOM 解析引擎抓取元数据（彻底告别正则失效）
         const meta = await fetchSuperMetadata(siteUrl);
         const cleanMeta = cleanText(meta);
         
-        const isInvalid = !/[a-zA-Z\u4e00-\u9fa5]{2}/.test(cleanMeta.title + cleanMeta.desc);
+        // 增强型无效内容检测（整合双分支逻辑）
+        const combinedText = cleanMeta.title + cleanMeta.desc;
+        const isAntiBot = /(robot|captcha|verify|check|security|验证|人机|机器人)/i.test(combinedText);
+        const isInvalid = isAntiBot || !/[a-zA-Z\u4e00-\u9fa5]{2}/.test(combinedText) || 
+                         (combinedText.length < 15 && !/[\u4e00-\u9fa5]/.test(combinedText));
 
-        // 3. 双 AI 模型兜底翻译与提炼
+        // 智能图标选择：优先使用网站自身图标，降级到favicon.im
+        let finalIcon = getPerfectFavicon(domain);
+        if (meta.iconUrl) {
+            try {
+                finalIcon = new URL(meta.iconUrl, siteUrl).href;
+            } catch (e) {
+                // 解析失败，使用默认favicon.im
+            }
+        }
+
+        // 3. 双擎 AI 深度解析与翻译
         let aiResult;
         if (!env.AI) throw new Error("AI Engine not bound");
 
@@ -74,11 +90,12 @@ export async function onRequest(context) {
             title: result.siteName,
             description: result.siteDesc,
             category: result.siteCategory,
-            icon: getPerfectFavicon(domain),
+            icon: finalIcon,
             url: siteUrl
-        }, null, 2), { headers: corsHeaders });
+        }, null, 2), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 
     } catch (error) {
+        console.error("解析失败:", error);
         const domain = extractDomain(targetUrl);
         return new Response(JSON.stringify({
             title: guessPerfectName(domain),
@@ -86,7 +103,7 @@ export async function onRequest(context) {
             category: "探索基地",
             icon: getPerfectFavicon(domain || "default"),
             url: targetUrl
-        }, null, 2), { headers: corsHeaders });
+        }, null, 2), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 }
 
@@ -118,10 +135,15 @@ function getMandatoryWhiteList() {
 }
 
 // ==========================================
-// 【2】国内永久图标
+// 【2】Favicon 智能获取（基于favicon.im官方文档优化）
 // ==========================================
 function getPerfectFavicon(domain) {
-    if (!domain || domain === 'default') return '';
+    if (!domain || domain === 'default') {
+        // 默认图标：使用favicon.im的默认回退
+        return 'https://favicon.im/default';
+    }
+    // 使用favicon.im服务，自动搜索最佳图标位置
+    // 如需更大尺寸，可添加 ?larger=true 参数
     return `https://favicon.im/${domain}`;
 }
 
@@ -155,7 +177,7 @@ async function fetchSuperMetadata(url) {
 
             if (res.ok) {
                 // 使用 Cloudflare 原生 HTMLRewriter，无视任何属性排序错乱
-                let extracted = { title: '', desc: '' };
+                let extracted = { title: '', desc: '', iconUrl: '' };
                 const rewriter = new HTMLRewriter()
                     .on('title', {
                         text(text) { extracted.title += text.text; }
@@ -169,6 +191,16 @@ async function fetchSuperMetadata(url) {
                             if (name === 'description' && !extracted.desc) extracted.desc = content;
                             if (prop === 'og:description' && !extracted.desc) extracted.desc = content;
                             if (prop === 'og:title' && !extracted.title) extracted.title = content;
+                            if (prop === 'og:image' && !extracted.iconUrl) extracted.iconUrl = content;
+                        }
+                    })
+                    // 额外提取link标签中的favicon
+                    .on('link[rel*="icon"]', {
+                        element(el) {
+                            const href = el.getAttribute('href');
+                            if (href && !extracted.iconUrl) {
+                                extracted.iconUrl = href;
+                            }
                         }
                     });
 
@@ -179,23 +211,28 @@ async function fetchSuperMetadata(url) {
             // 继续重试
         }
     }
-    return { title: "", desc: "" };
+    return { title: "", desc: "", iconUrl: "" };
 }
 
 // ==========================================
-// 【4】翻译指令锁死 Prompt
+// 【4】翻译指令锁死 Prompt（整合双分支最佳实践）
 // ==========================================
 function getPerfectPrompt(meta, url, isInvalid) {
     const isLackingInfo = isInvalid || !meta.desc || meta.desc.trim().length < 5;
+    
+    return `你是一个无情的JSON提取与翻译机器。严格执行以下所有规则，绝对不要输出任何其他文字、解释或Markdown符号！
 
-    return `你是一个无情的JSON翻译与精简机器。严格执行！只输出纯JSON，无任何其他文字和Markdown标记！
 核心死命令：
-1. 强制中文翻译：无论源数据是英文、日文还是乱码，你必须将其翻译、提炼为纯正的【简体中文】！
-2. siteName：网民最常用的极简称呼（限15个字符内）。国外知名项目保留核心英文。绝对禁止无脑添加“站”字！
-3. siteDesc：绝对的一句话中文，限30个汉字以内。纯人话，一针见血，禁止机器腔（禁止出现"这是一个提供..."）。如果提供的数据缺乏描述（Desc为空），你必须根据该域名（${url}）调动百科知识库自己写一句中文介绍！
-4. siteCategory：必须从 [视频音乐, 论坛, 探索基地, 购物, 知识, 技术, 生活, 通讯, AI人工智能, 未分类] 中选择一个最贴切的。
+1. 强制中文翻译：无论源数据是英文、日文还是乱码，必须翻译、提炼为纯正的【简体中文】！
+2. siteName：网民最常用的极简称呼（限15个字符内）。国外知名项目保留核心英文。绝对禁止无脑添加"站"字！注意分析子域名（例如 music.youtube.com 应该是 YouTube Music）。
+3. siteDesc：【最高优先级】一句话中文简介（限30个汉字以内）。纯人话，一针见血，禁止机器腔（禁止出现"这是一个提供..."）。
+   如果提供的数据为空、无意义、包含防爬虫验证，或者"是否缺乏有效描述信息"为true，必须彻底忽略原始数据！
+   请直接根据网址（${url}）和它的知名度，从你的知识库中写一句精准的中文介绍！绝对不要输出"暂无简介"！
+4. siteCategory：必须从 [视频音乐, 论坛, 探索基地, 购物, 知识, 技术, 生活, 通讯, AI人工智能, 实用工具, 设计, 开发者] 中选择一个最贴切的。
+   如果没有合适的，可以自行发明一个2到4个字的精准中文分类。
 
-格式要求：{"siteName":"名字","siteDesc":"中文简介","siteCategory":"分类"}
+输出格式严格如下：
+{"siteName": "网站名称", "siteDesc": "一句话中文简介", "siteCategory": "分类"}
 
 待处理源数据：
 标题: ${meta.title}
@@ -205,27 +242,50 @@ function getPerfectPrompt(meta, url, isInvalid) {
 }
 
 // ==========================================
-// 【5】终极强制校验
+// 【5】终极强制校验（整合双分支逻辑）
 // ==========================================
 function forceValidate(aiRes, domain) {
     try {
         let jsonStr = aiRes.response || "";
+
+        // 尝试修复被截断或带有奇怪字符的JSON
         let jsonMatch = jsonStr.match(/\{[\s\S]*\}/);
-        let data = JSON.parse(jsonMatch ? jsonMatch[0] : "{}");
+        if (!jsonMatch) throw new Error("No JSON found");
+
+        let data;
+        try {
+            data = JSON.parse(jsonMatch[0]);
+        } catch(e) {
+            // 如果解析失败，尝试去掉可能的尾部垃圾字符
+            let cleanStr = jsonMatch[0].replace(/}[^}]*$/, '}');
+            data = JSON.parse(cleanStr);
+        }
         
         data.siteName = (data.siteName || guessPerfectName(domain)).slice(0, 20); 
-        data.siteDesc = (data.siteDesc || "暂无简介").slice(0, 40);
+        data.siteDesc = (data.siteDesc || "暂无简介").slice(0, 50);
+
+        // 强制替换AI偷懒输出的"暂无简介"
+        if (data.siteDesc === "暂无简介") {
+            data.siteDesc = `访问 ${guessPerfectName(domain)} 的官方站点`;
+        }
         
-        const validCategories = ["视频音乐", "论坛", "探索基地", "购物", "知识", "技术", "生活", "通讯", "AI人工智能"];
-        data.siteCategory = validCategories.includes(data.siteCategory) ? data.siteCategory : "探索基地";
-        
+        // 移除机器腔前缀
         if(data.siteDesc.startsWith("这是一个") || data.siteDesc.startsWith("这是一款")) {
             data.siteDesc = data.siteDesc.replace(/^这是(一个|一款)/, "");
         }
         
+        // 验证分类有效性
+        const validCategories = ["视频音乐", "论坛", "探索基地", "购物", "知识", "技术", "生活", "通讯", "AI人工智能"];
+        data.siteCategory = validCategories.includes(data.siteCategory) ? data.siteCategory : "探索基地";
+        
         return data;
     } catch (e) {
-        return { siteName: guessPerfectName(domain), siteDesc: "暂无简介", siteCategory: "探索基地" };
+        console.error("AI结果解析失败:", e);
+        return { 
+            siteName: guessPerfectName(domain), 
+            siteDesc: `访问 ${guessPerfectName(domain)} 的官方站点`, 
+            siteCategory: "探索基地" 
+        };
     }
 }
 
