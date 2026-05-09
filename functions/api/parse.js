@@ -1,5 +1,5 @@
 /**
- * 37° Nav - 边缘智能靶向解析 API (知识库强制唤醒 + 误杀修复版)
+ * 37° Nav - 边缘智能靶向解析 API (HTMLRewriter 引擎重构版)
  * 架构适配：Cloudflare Pages Functions
  */
 
@@ -14,6 +14,7 @@ export async function onRequest(context) {
 
     if (request.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
 
+    // 提取 URL
     let targetUrl = new URL(request.url).searchParams.get('url');
     if (!targetUrl && request.method === 'POST') {
         const body = await request.json().catch(() => ({}));
@@ -23,11 +24,12 @@ export async function onRequest(context) {
     try {
         if (!targetUrl) throw new Error("Missing URL");
         
+        // 标准化网址
         const siteUrl = targetUrl.startsWith('http') ? targetUrl : `https://${targetUrl}`;
         const domain = new URL(siteUrl).hostname;
         const rootDomain = getRootDomain(domain);
 
-        // 1. 白名单直通车
+        // 1. 顶级优先级：强制简称白名单
         const whiteList = getMandatoryWhiteList();
         if (whiteList[domain] || whiteList[rootDomain]) {
             const data = whiteList[domain] || whiteList[rootDomain];
@@ -40,27 +42,13 @@ export async function onRequest(context) {
             }, null, 2), { headers: corsHeaders });
         }
 
-        // 2. 强力抓取元数据
+        // 2. 启用真正的 DOM 解析引擎抓取元数据（彻底告别正则失效）
         const meta = await fetchSuperMetadata(siteUrl);
         const cleanMeta = cleanText(meta);
         
-        // Improve invalid detection: Check if it's an anti-bot page or lacks meaningful content
-        const antiBotKeywords = ["just a moment", "attention required", "cloudflare", "captcha", "are you human", "access denied", "checking your browser"];
-        const combinedText = (cleanMeta.title + " " + cleanMeta.desc).toLowerCase();
-        const isAntiBot = antiBotKeywords.some(kw => combinedText.includes(kw));
+        const isInvalid = !/[a-zA-Z\u4e00-\u9fa5]{2}/.test(cleanMeta.title + cleanMeta.desc);
 
-        const isInvalid = isAntiBot || !/[a-zA-Z\u4e00-\u9fa5]{2}/.test(combinedText);
-
-        let finalIcon = getPerfectFavicon(domain);
-        if (meta.iconUrl) {
-            try {
-                finalIcon = new URL(meta.iconUrl, siteUrl).href;
-            } catch (e) {
-                // fallback to default
-            }
-        }
-
-        // 3. 双擎 AI 深度解析
+        // 3. 双 AI 模型兜底翻译与提炼
         let aiResult;
         if (!env.AI) throw new Error("AI Engine not bound");
 
@@ -71,7 +59,7 @@ export async function onRequest(context) {
                 max_tokens: 256
             });
         } catch (e) {
-            console.warn("70B 主引擎过载，切换至 8B 极速引擎", e);
+            console.warn("70B 引擎过载，极速切换至 8B", e);
             aiResult = await env.AI.run('@cf/meta/llama-3.1-8b-instruct', {
                 messages: [{ role: 'user', content: getPerfectPrompt(cleanMeta, siteUrl, isInvalid) }],
                 temperature: 0, 
@@ -79,14 +67,14 @@ export async function onRequest(context) {
             });
         }
 
-        // 4. 提取与净化
+        // 4. 终极 JSON 净化与提取
         const result = forceValidate(aiResult, domain);
 
         return new Response(JSON.stringify({
             title: result.siteName,
             description: result.siteDesc,
             category: result.siteCategory,
-            icon: finalIcon,
+            icon: getPerfectFavicon(domain),
             url: siteUrl
         }, null, 2), { headers: corsHeaders });
 
@@ -94,7 +82,7 @@ export async function onRequest(context) {
         const domain = extractDomain(targetUrl);
         return new Response(JSON.stringify({
             title: guessPerfectName(domain),
-            description: "网站无法访问或防爬虫拦截",
+            description: "网站防爬虫或解析失败",
             category: "探索基地",
             icon: getPerfectFavicon(domain || "default"),
             url: targetUrl
@@ -129,11 +117,17 @@ function getMandatoryWhiteList() {
     };
 }
 
+// ==========================================
+// 【2】国内永久图标
+// ==========================================
 function getPerfectFavicon(domain) {
     if (!domain || domain === 'default') return '';
     return `https://favicon.im/${domain}`;
 }
 
+// ==========================================
+// 【3】跨洋防反爬元数据抓取 (全面升级 HTMLRewriter 引擎)
+// ==========================================
 async function fetchSuperMetadata(url) {
     const agents = [
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/124.0.0.0 Safari/537.36",
@@ -160,43 +154,46 @@ async function fetchSuperMetadata(url) {
             clearTimeout(timeoutId);
 
             if (res.ok) {
-                const html = (await res.text()).substring(0, 50000); 
+                // 使用 Cloudflare 原生 HTMLRewriter，无视任何属性排序错乱
+                let extracted = { title: '', desc: '' };
+                const rewriter = new HTMLRewriter()
+                    .on('title', {
+                        text(text) { extracted.title += text.text; }
+                    })
+                    .on('meta', {
+                        element(el) {
+                            const name = (el.getAttribute('name') || '').toLowerCase();
+                            const prop = (el.getAttribute('property') || '').toLowerCase();
+                            const content = el.getAttribute('content') || '';
+                            
+                            if (name === 'description' && !extracted.desc) extracted.desc = content;
+                            if (prop === 'og:description' && !extracted.desc) extracted.desc = content;
+                            if (prop === 'og:title' && !extracted.title) extracted.title = content;
+                        }
+                    });
 
-                const titleMatch = html.match(/<title[^>]*>(.*?)<\/title>/is)?.[1]
-                    || html.match(/property="og:title"\s+content="(.*?)"/is)?.[1]
-                    || html.match(/name="twitter:title"\s+content="(.*?)"/is)?.[1]
-                    || "";
-
-                const descMatch = html.match(/name="description"\s+content="(.*?)"/is)?.[1]
-                    || html.match(/property="og:description"\s+content="(.*?)"/is)?.[1]
-                    || html.match(/name="twitter:description"\s+content="(.*?)"/is)?.[1]
-                    || "";
-
-                const iconMatch = html.match(/<link[^>]*rel="[^"]*(?:icon|apple-touch-icon)[^"]*"[^>]*href="([^"]+)"/is)?.[1]
-                    || html.match(/<link[^>]*href="([^"]+)"[^>]*rel="[^"]*(?:icon|apple-touch-icon)[^"]*"/is)?.[1]
-                    || "";
-
-                return {
-                    title: titleMatch,
-                    desc: descMatch,
-                    iconUrl: iconMatch
-                };
+                await rewriter.transform(res).text();
+                return extracted;
             }
-        } catch (e) {}
+        } catch (e) {
+            // 继续重试
+        }
     }
-    return { title: "", desc: "", iconUrl: "" };
+    return { title: "", desc: "" };
 }
 
-// 【核心修复】：强化知识库唤醒，即使只有标题没有描述，也要强行盲猜
+// ==========================================
+// 【4】翻译指令锁死 Prompt
+// ==========================================
 function getPerfectPrompt(meta, url, isInvalid) {
     const isLackingInfo = isInvalid || !meta.desc || meta.desc.trim().length < 5;
-    
+
     return `你是一个无情的JSON翻译与精简机器。严格执行！只输出纯JSON，无任何其他文字和Markdown标记！
 核心死命令：
-1. 强制中文翻译：无论源数据是英文还是乱码，必须提炼为纯正的【简体中文】！
-2. siteName：网民最常用的极简称呼（限15字符）。国外知名项目保留核心英文。绝对禁止无脑加“站”字！注意分析子域名（如 music.youtube.com 应为 YouTube Music）。
-3. siteDesc：【最高优先级】必须是一句话中文简介（限30汉字）。如果提供的数据缺乏描述（Desc为空、含有验证码防爬虫信息，或者 "是否缺乏有效描述信息" 为 true），你必须立刻忽略现有描述，分析网址（${url}），调动你的百科知识库，根据该域名或子域名的知名度自己写一句精准的中文介绍！绝对禁止轻易说“暂无简介”！
-4. siteCategory：选择一个最贴切的分类。你可以从 [视频音乐, 论坛, 探索基地, 购物, 知识, 技术, 生活, 通讯, AI人工智能, 实用工具, 设计, 开发者] 中选择，但如果你认为有更合适、更精准的 2 到 4 个字的中文分类名称，请大胆发明并使用它！
+1. 强制中文翻译：无论源数据是英文、日文还是乱码，你必须将其翻译、提炼为纯正的【简体中文】！
+2. siteName：网民最常用的极简称呼（限15个字符内）。国外知名项目保留核心英文。绝对禁止无脑添加“站”字！
+3. siteDesc：绝对的一句话中文，限30个汉字以内。纯人话，一针见血，禁止机器腔（禁止出现"这是一个提供..."）。如果提供的数据缺乏描述（Desc为空），你必须根据该域名（${url}）调动百科知识库自己写一句中文介绍！
+4. siteCategory：必须从 [视频音乐, 论坛, 探索基地, 购物, 知识, 技术, 生活, 通讯, AI人工智能, 未分类] 中选择一个最贴切的。
 
 格式要求：{"siteName":"名字","siteDesc":"中文简介","siteCategory":"分类"}
 
@@ -207,7 +204,9 @@ function getPerfectPrompt(meta, url, isInvalid) {
 是否缺乏有效描述信息: ${isLackingInfo}`;
 }
 
-// 【核心修复】：取消对常用词“提供”的误杀，仅智能裁切废话开头
+// ==========================================
+// 【5】终极强制校验
+// ==========================================
 function forceValidate(aiRes, domain) {
     try {
         let jsonStr = aiRes.response || "";
@@ -215,14 +214,11 @@ function forceValidate(aiRes, domain) {
         let data = JSON.parse(jsonMatch ? jsonMatch[0] : "{}");
         
         data.siteName = (data.siteName || guessPerfectName(domain)).slice(0, 20); 
-        data.siteDesc = (data.siteDesc || "暂无简介").slice(0, 50);
+        data.siteDesc = (data.siteDesc || "暂无简介").slice(0, 40);
         
-        // 允许 AI 发明分类，但限制长度以防乱写
-        if (!data.siteCategory || data.siteCategory.length > 8) {
-             data.siteCategory = "探索基地";
-        }
+        const validCategories = ["视频音乐", "论坛", "探索基地", "购物", "知识", "技术", "生活", "通讯", "AI人工智能"];
+        data.siteCategory = validCategories.includes(data.siteCategory) ? data.siteCategory : "探索基地";
         
-        // 智能裁切：不再粗暴地替换为“暂无简介”，而是仅仅把废话开头删掉
         if(data.siteDesc.startsWith("这是一个") || data.siteDesc.startsWith("这是一款")) {
             data.siteDesc = data.siteDesc.replace(/^这是(一个|一款)/, "");
         }
@@ -233,13 +229,11 @@ function forceValidate(aiRes, domain) {
     }
 }
 
+// ==========================================
+// 【6】首字母大写盲猜兜底
+// ==========================================
 function guessPerfectName(domain) {
     if(!domain) return "未知站点";
-    // 更好地处理子域名
-    const parts = domain.split(".");
-    if (parts.length > 2 && parts[0] !== "www") {
-        return (parts[0].charAt(0).toUpperCase() + parts[0].slice(1)) + " " + (parts[1].charAt(0).toUpperCase() + parts[1].slice(1));
-    }
     const main = getRootDomain(domain).split(".")[0];
     return main.charAt(0).toUpperCase() + main.slice(1);
 }
@@ -250,22 +244,8 @@ function getRootDomain(d) {
     return p.length >= 2 ? `${p[p.length-2]}.${p[p.length-1]}` : d; 
 }
 
-function decodeHTMLEntities(text) {
-    const entities = {
-        '&#039;': "'",
-        '&quot;': '"',
-        '&amp;': '&',
-        '&lt;': '<',
-        '&gt;': '>',
-        '&nbsp;': ' ',
-        '&mdash;': '—',
-        '&ndash;': '–'
-    };
-    return text.replace(/&#?\w+;/g, match => entities[match] || match);
-}
-
 function cleanText(m) { 
-    const c = s => decodeHTMLEntities((s || "").replace(/[\r\n\t]+/g, " ").replace(/\s{2,}/g, " ").trim());
+    const c = s => (s || "").replace(/[\r\n\t]+/g, " ").replace(/\s{2,}/g, " ").trim(); 
     return { title: c(m.title), desc: c(m.desc) }; 
 }
 
