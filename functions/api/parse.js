@@ -44,7 +44,12 @@ export async function onRequest(context) {
         const meta = await fetchSuperMetadata(siteUrl);
         const cleanMeta = cleanText(meta);
         
-        const isInvalid = !/[a-zA-Z\u4e00-\u9fa5]{2}/.test(cleanMeta.title + cleanMeta.desc);
+        // Improve invalid detection: Check if it's an anti-bot page or lacks meaningful content
+        const antiBotKeywords = ["just a moment", "attention required", "cloudflare", "captcha", "are you human", "access denied", "checking your browser"];
+        const combinedText = (cleanMeta.title + " " + cleanMeta.desc).toLowerCase();
+        const isAntiBot = antiBotKeywords.some(kw => combinedText.includes(kw));
+
+        const isInvalid = isAntiBot || !/[a-zA-Z\u4e00-\u9fa5]{2}/.test(combinedText);
 
         let finalIcon = getPerfectFavicon(domain);
         if (meta.iconUrl) {
@@ -189,9 +194,9 @@ function getPerfectPrompt(meta, url, isInvalid) {
     return `你是一个无情的JSON翻译与精简机器。严格执行！只输出纯JSON，无任何其他文字和Markdown标记！
 核心死命令：
 1. 强制中文翻译：无论源数据是英文还是乱码，必须提炼为纯正的【简体中文】！
-2. siteName：网民最常用的极简称呼（限15字符）。国外知名项目保留核心英文。绝对禁止无脑加“站”字！
-3. siteDesc：【最高优先级】必须是一句话中文简介（限30汉字）。如果提供的数据缺乏描述（Desc为空或无意义），你必须立刻分析网址（${url}），调动你的百科知识库，根据该域名或子域名的知名度自己写一句精准的中文介绍！绝对禁止轻易说“暂无简介”！
-4. siteCategory：必须从 [视频音乐, 论坛, 探索基地, 购物, 知识, 技术, 生活, 通讯, AI人工智能, 实用工具, 设计, 未分类] 中选择一个最贴切的。
+2. siteName：网民最常用的极简称呼（限15字符）。国外知名项目保留核心英文。绝对禁止无脑加“站”字！注意分析子域名（如 music.youtube.com 应为 YouTube Music）。
+3. siteDesc：【最高优先级】必须是一句话中文简介（限30汉字）。如果提供的数据缺乏描述（Desc为空、含有验证码防爬虫信息，或者 "是否缺乏有效描述信息" 为 true），你必须立刻忽略现有描述，分析网址（${url}），调动你的百科知识库，根据该域名或子域名的知名度自己写一句精准的中文介绍！绝对禁止轻易说“暂无简介”！
+4. siteCategory：选择一个最贴切的分类。你可以从 [视频音乐, 论坛, 探索基地, 购物, 知识, 技术, 生活, 通讯, AI人工智能, 实用工具, 设计, 开发者] 中选择，但如果你认为有更合适、更精准的 2 到 4 个字的中文分类名称，请大胆发明并使用它！
 
 格式要求：{"siteName":"名字","siteDesc":"中文简介","siteCategory":"分类"}
 
@@ -210,10 +215,12 @@ function forceValidate(aiRes, domain) {
         let data = JSON.parse(jsonMatch ? jsonMatch[0] : "{}");
         
         data.siteName = (data.siteName || guessPerfectName(domain)).slice(0, 20); 
-        data.siteDesc = (data.siteDesc || "暂无简介").slice(0, 40);
+        data.siteDesc = (data.siteDesc || "暂无简介").slice(0, 50);
         
-        const validCategories = ["视频音乐", "论坛", "探索基地", "购物", "知识", "技术", "生活", "通讯", "AI人工智能", "实用工具", "设计"];
-        data.siteCategory = validCategories.includes(data.siteCategory) ? data.siteCategory : "探索基地";
+        // 允许 AI 发明分类，但限制长度以防乱写
+        if (!data.siteCategory || data.siteCategory.length > 8) {
+             data.siteCategory = "探索基地";
+        }
         
         // 智能裁切：不再粗暴地替换为“暂无简介”，而是仅仅把废话开头删掉
         if(data.siteDesc.startsWith("这是一个") || data.siteDesc.startsWith("这是一款")) {
@@ -228,6 +235,11 @@ function forceValidate(aiRes, domain) {
 
 function guessPerfectName(domain) {
     if(!domain) return "未知站点";
+    // 更好地处理子域名
+    const parts = domain.split(".");
+    if (parts.length > 2 && parts[0] !== "www") {
+        return (parts[0].charAt(0).toUpperCase() + parts[0].slice(1)) + " " + (parts[1].charAt(0).toUpperCase() + parts[1].slice(1));
+    }
     const main = getRootDomain(domain).split(".")[0];
     return main.charAt(0).toUpperCase() + main.slice(1);
 }
