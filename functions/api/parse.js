@@ -130,7 +130,12 @@ function getMandatoryWhiteList() {
         "mail.google.com": { siteName: "谷歌邮箱", siteDesc: "安全高效的免费电子邮件服务", siteCategory: "通讯" },
         "gemini.google.com": { siteName: "Gemini", siteDesc: "Google 旗下原生多模态人工智能大模型", siteCategory: "AI人工智能" },
         "chatgpt.com": { siteName: "ChatGPT", siteDesc: "OpenAI 旗下的现象级 AI 聊天机器人", siteCategory: "AI人工智能" },
-        "dash.cloudflare.com": { siteName: "CF 控制台", siteDesc: "全球领先的边缘计算与 CDN 管理平台", siteCategory: "探索基地" }
+        "dash.cloudflare.com": { siteName: "CF 控制台", siteDesc: "全球领先的边缘计算与 CDN 管理平台", siteCategory: "探索基地" },
+        "claude.ai": { siteName: "Claude", siteDesc: "Anthropic 开发的高智能 AI 助手", siteCategory: "AI人工智能" },
+        "duckduckgo.com": { siteName: "DuckDuckGo", siteDesc: "不追踪用户的隐私保护搜索引擎", siteCategory: "探索基地" },
+        "wikipedia.org": { siteName: "维基百科", siteDesc: "自由的百科全书，人类知识的基石", siteCategory: "知识" },
+        "reddit.com": { siteName: "Reddit", siteDesc: "全球最大的综合性兴趣社区", siteCategory: "论坛" },
+        "netflix.com": { siteName: "网飞", siteDesc: "全球领先的流媒体点播平台", siteCategory: "视频音乐" }
     };
 }
 
@@ -176,8 +181,29 @@ async function fetchSuperMetadata(url) {
             clearTimeout(timeoutId);
 
             if (res.ok) {
+                // 处理字符编码：尝试从 Content-Type 中提取 charset
+                const contentType = res.headers.get("Content-Type") || "";
+                const charsetMatch = contentType.match(/charset=([^;]+)/i);
+                const charset = charsetMatch ? charsetMatch[1].trim().toLowerCase() : "utf-8";
+
                 // 使用 Cloudflare 原生 HTMLRewriter，无视任何属性排序错乱
                 let extracted = { title: '', desc: '', iconUrl: '' };
+
+                // 针对非 UTF-8 编码进行预处理 (Cloudflare HTMLRewriter 仅支持 UTF-8)
+                let responseToTransform = res;
+                if (charset !== "utf-8" && charset !== "utf8") {
+                    try {
+                        const buffer = await res.arrayBuffer();
+                        const decoder = new TextDecoder(charset);
+                        const decodedText = decoder.decode(buffer);
+                        responseToTransform = new Response(decodedText, {
+                            headers: res.headers
+                        });
+                    } catch (e) {
+                        // 解码失败则降级使用原始响应
+                    }
+                }
+
                 const rewriter = new HTMLRewriter()
                     .on('title', {
                         text(text) { extracted.title += text.text; }
@@ -188,10 +214,15 @@ async function fetchSuperMetadata(url) {
                             const prop = (el.getAttribute('property') || '').toLowerCase();
                             const content = el.getAttribute('content') || '';
                             
-                            if (name === 'description' && !extracted.desc) extracted.desc = content;
-                            if (prop === 'og:description' && !extracted.desc) extracted.desc = content;
-                            if (prop === 'og:title' && !extracted.title) extracted.title = content;
-                            if (prop === 'og:image' && !extracted.iconUrl) extracted.iconUrl = content;
+                            if ((name === 'description' || name === 'keywords' || prop === 'og:description' || prop === 'twitter:description') && !extracted.desc) {
+                                extracted.desc = content;
+                            }
+                            if ((prop === 'og:title' || prop === 'twitter:title' || name === 'application-name') && !extracted.title) {
+                                extracted.title = content;
+                            }
+                            if ((prop === 'og:image' || prop === 'twitter:image') && !extracted.iconUrl) {
+                                extracted.iconUrl = content;
+                            }
                         }
                     })
                     // 额外提取link标签中的favicon
@@ -204,7 +235,7 @@ async function fetchSuperMetadata(url) {
                         }
                     });
 
-                await rewriter.transform(res).text();
+                await rewriter.transform(responseToTransform).text();
                 return extracted;
             }
         } catch (e) {
@@ -220,19 +251,24 @@ async function fetchSuperMetadata(url) {
 function getPerfectPrompt(meta, url, isInvalid) {
     const isLackingInfo = isInvalid || !meta.desc || meta.desc.trim().length < 5;
     
-    return `你是一个无情的JSON提取与翻译机器。严格执行以下所有规则，绝对不要输出任何其他文字、解释或Markdown符号！
+    return `你是一个顶级的国际化互联网产品专家。你的任务是基于提供的元数据，为导航站点提取并翻译出最精准的中文信息。
 
-核心死命令：
-1. 强制中文翻译：无论源数据是英文、日文还是乱码，必须翻译、提炼为纯正的【简体中文】！
-2. siteName：网民最常用的极简称呼（限15个字符内）。国外知名项目保留核心英文。绝对禁止无脑添加"站"字！注意分析子域名（例如 music.youtube.com 应该是 YouTube Music）。
-3. siteDesc：【最高优先级】一句话中文简介（限30个汉字以内）。纯人话，一针见血，禁止机器腔（禁止出现"这是一个提供..."）。
-   如果提供的数据为空、无意义、包含防爬虫验证，或者"是否缺乏有效描述信息"为true，必须彻底忽略原始数据！
-   请直接根据网址（${url}）和它的知名度，从你的知识库中写一句精准的中文介绍！绝对不要输出"暂无简介"！
-4. siteCategory：必须从 [视频音乐, 论坛, 探索基地, 购物, 知识, 技术, 生活, 通讯, AI人工智能, 实用工具, 设计, 开发者] 中选择一个最贴切的。
-   如果没有合适的，可以自行发明一个2到4个字的精准中文分类。
+严格执行以下规则：
+1. 【强制简体中文】：无论输入是什么语言，输出必须是自然、流畅、准确的简体中文。
+2. 【siteName 极简主义】：
+   - 国内站点：使用网民最熟悉的中文简称（如 "百度" 而非 "百度一下，你就知道"）。
+   - 国外站点：保留核心英文名称（如 "GitHub", "YouTube"），或使用公认的中文名。
+   - 严禁后缀：除非是名称一部分，否则严禁带有 "官网"、"首页"、"官方网站" 等词汇。
+3. 【siteDesc 降维打击】：
+   - 限制在 30 个汉字以内。
+   - 风格：专业、干练、有人气，禁止机器翻译腔。
+   - 如果原始数据质量极低（isLackingInfo=true），请完全忽略原始描述，直接根据网址 ${url} 的知名度和你的知识储备生成一段精辟的中文介绍。
+4. 【siteCategory 智能归类】：
+   - 必须从以下列表中选择：[视频音乐, 论坛, 探索基地, 购物, 知识, 技术, 生活, 通讯, AI人工智能, 实用工具, 设计, 开发者, 财经, 游戏, 社交]。
+   - 如果都不符合，请根据站点属性归纳一个 2-4 字的中文分类。
 
-输出格式严格如下：
-{"siteName": "网站名称", "siteDesc": "一句话中文简介", "siteCategory": "分类"}
+输出格式必须是纯 JSON，严禁任何 Markdown 标记或多余文字：
+{"siteName": "名称", "siteDesc": "一句话精辟简介", "siteCategory": "分类"}
 
 待处理源数据：
 标题: ${meta.title}
@@ -301,7 +337,7 @@ function guessPerfectName(domain) {
     // 尝试提取最有意义的部分
     // 如果是 sub.domain.com，优先取 sub domain
     if (parts.length >= 2) {
-        const tldParts = ['com', 'net', 'org', 'edu', 'gov', 'cn', 'me', 'io', 'cc', 'tv'];
+        const tldParts = ['com', 'net', 'org', 'edu', 'gov', 'cn', 'me', 'io', 'cc', 'tv', 'ai', 'app', 'dev', 'info', 'xyz'];
         let significantParts = [];
 
         for (let i = 0; i < parts.length; i++) {
