@@ -382,6 +382,20 @@
                     if(data.title) document.getElementById('node-title').value = data.title;
                     if(data.description) document.getElementById('node-desc').value = data.description;
                     if(data.icon !== undefined) document.getElementById('node-icon').value = data.icon;
+                    if(data.category) {
+                        const select = document.getElementById('node-category');
+                        let exists = false;
+                        for (let i = 0; i < select.options.length; i++) {
+                            if (select.options[i].value === data.category) { exists = true; break; }
+                        }
+                        if (!exists) {
+                            const newOption = document.createElement('option');
+                            newOption.value = data.category;
+                            newOption.text = data.category + " (AI智能)";
+                            select.appendChild(newOption);
+                        }
+                        select.value = data.category;
+                    }
                     statusMsg.style.color = "var(--green)"; statusMsg.innerText = "解析完成。";
                 }
             } catch(e) {
