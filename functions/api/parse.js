@@ -298,7 +298,7 @@ function guessPerfectName(domain) {
     return main.charAt(0).toUpperCase() + main.slice(1);
 }
 
-function getRootDomain(d) { 
+export function getRootDomain(d) {
     if(!d) return "";
     const p = d.split('.'); 
     return p.length >= 2 ? `${p[p.length-2]}.${p[p.length-1]}` : d; 
