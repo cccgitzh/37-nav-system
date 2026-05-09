@@ -294,6 +294,26 @@ function forceValidate(aiRes, domain) {
 // ==========================================
 function guessPerfectName(domain) {
     if(!domain) return "未知站点";
+
+    // 排除常见前缀
+    const parts = domain.split('.').filter(p => !['www', 'm', 'mobile', 'mail'].includes(p.toLowerCase()));
+
+    // 尝试提取最有意义的部分
+    // 如果是 sub.domain.com，优先取 sub domain
+    if (parts.length >= 2) {
+        const tldParts = ['com', 'net', 'org', 'edu', 'gov', 'cn', 'me', 'io', 'cc', 'tv'];
+        let significantParts = [];
+
+        for (let i = 0; i < parts.length; i++) {
+            if (tldParts.includes(parts[i].toLowerCase())) break;
+            significantParts.push(parts[i]);
+        }
+
+        if (significantParts.length > 0) {
+            return significantParts.map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' ');
+        }
+    }
+
     const main = getRootDomain(domain).split(".")[0];
     return main.charAt(0).toUpperCase() + main.slice(1);
 }
@@ -301,7 +321,17 @@ function guessPerfectName(domain) {
 export function getRootDomain(d) {
     if(!d) return "";
     const p = d.split('.'); 
-    return p.length >= 2 ? `${p[p.length-2]}.${p[p.length-1]}` : d; 
+    if (p.length < 2) return d;
+
+    // 处理 .com.cn / .net.cn 等双重后缀
+    const doubleSuffixes = ['com.cn', 'net.cn', 'org.cn', 'gov.cn', 'edu.cn'];
+    const lastTwo = `${p[p.length-2]}.${p[p.length-1]}`.toLowerCase();
+
+    if (doubleSuffixes.includes(lastTwo) && p.length >= 3) {
+        return `${p[p.length-3]}.${lastTwo}`;
+    }
+
+    return `${p[p.length-2]}.${p[p.length-1]}`;
 }
 
 function cleanText(m) { 
