@@ -49,7 +49,8 @@ export async function onRequest(context) {
         const combinedText = (cleanMeta.title + " " + cleanMeta.desc).toLowerCase();
         const isAntiBot = antiBotKeywords.some(kw => combinedText.includes(kw));
 
-        const isInvalid = isAntiBot || !/[a-zA-Z\u4e00-\u9fa5]{2}/.test(combinedText);
+        // It's invalid if it's a bot check, OR if it has literally no characters, OR if it's purely English but very short
+        const isInvalid = isAntiBot || !/[a-zA-Z\u4e00-\u9fa5]{2}/.test(combinedText) || (combinedText.length < 15 && !/[\u4e00-\u9fa5]/.test(combinedText));
 
         let finalIcon = getPerfectFavicon(domain);
         if (meta.iconUrl) {
@@ -191,14 +192,16 @@ async function fetchSuperMetadata(url) {
 function getPerfectPrompt(meta, url, isInvalid) {
     const isLackingInfo = isInvalid || !meta.desc || meta.desc.trim().length < 5;
     
-    return `你是一个无情的JSON翻译与精简机器。严格执行！只输出纯JSON，无任何其他文字和Markdown标记！
-核心死命令：
-1. 强制中文翻译：无论源数据是英文还是乱码，必须提炼为纯正的【简体中文】！
-2. siteName：网民最常用的极简称呼（限15字符）。国外知名项目保留核心英文。绝对禁止无脑加“站”字！注意分析子域名（如 music.youtube.com 应为 YouTube Music）。
-3. siteDesc：【最高优先级】必须是一句话中文简介（限30汉字）。如果提供的数据缺乏描述（Desc为空、含有验证码防爬虫信息，或者 "是否缺乏有效描述信息" 为 true），你必须立刻忽略现有描述，分析网址（${url}），调动你的百科知识库，根据该域名或子域名的知名度自己写一句精准的中文介绍！绝对禁止轻易说“暂无简介”！
-4. siteCategory：选择一个最贴切的分类。你可以从 [视频音乐, 论坛, 探索基地, 购物, 知识, 技术, 生活, 通讯, AI人工智能, 实用工具, 设计, 开发者] 中选择，但如果你认为有更合适、更精准的 2 到 4 个字的中文分类名称，请大胆发明并使用它！
+    return `你是一个无情的JSON提取器。你必须并且只能输出合法的JSON对象，绝对不要输出任何其他文字、解释或Markdown符号！
 
-格式要求：{"siteName":"名字","siteDesc":"中文简介","siteCategory":"分类"}
+核心任务：提取或猜测给定网站的信息。
+1. 无论原始数据是什么语言，输出必须是纯正的【简体中文】。
+2. siteName：网民最常用的极简称呼（限15字符）。注意分析网址的子域名（例如 music.youtube.com 应该是 YouTube Music）。
+3. siteDesc：【最高优先级】一句话中文简介（限30汉字）。如果提供的数据为空、无意义、包含防爬虫验证，或者 "是否缺乏有效描述信息" 为 true，你必须彻底忽略原始数据！请直接根据网址（${url}）和它的知名度，从你的知识库中写一句精准的中文介绍！绝对不要输出“暂无简介”！
+4. siteCategory：选择最贴切的分类。可以从 [视频音乐, 论坛, 探索基地, 购物, 知识, 技术, 生活, 通讯, AI人工智能, 实用工具, 设计, 开发者] 中选。如果没有合适的，你可以自行发明一个 2 到 4 个字的精准中文分类。
+
+输出格式严格如下：
+{"siteName": "网站名称", "siteDesc": "一句话中文简介", "siteCategory": "分类"}
 
 待处理源数据：
 标题: ${meta.title}
@@ -211,11 +214,27 @@ function getPerfectPrompt(meta, url, isInvalid) {
 function forceValidate(aiRes, domain) {
     try {
         let jsonStr = aiRes.response || "";
+
+        // 尝试修复被截断或带有奇怪字符的JSON
         let jsonMatch = jsonStr.match(/\{[\s\S]*\}/);
-        let data = JSON.parse(jsonMatch ? jsonMatch[0] : "{}");
+        if (!jsonMatch) throw new Error("No JSON found");
+
+        let data;
+        try {
+            data = JSON.parse(jsonMatch[0]);
+        } catch(e) {
+            // 如果解析失败，尝试去掉可能的尾部垃圾字符
+            let cleanStr = jsonMatch[0].replace(/}[^}]*$/, '}');
+            data = JSON.parse(cleanStr);
+        }
         
         data.siteName = (data.siteName || guessPerfectName(domain)).slice(0, 20); 
         data.siteDesc = (data.siteDesc || "暂无简介").slice(0, 50);
+
+        if (data.siteDesc === "暂无简介") {
+            // 如果 AI 还是偷懒了，强制用 fallback 描述
+            data.siteDesc = `访问 ${guessPerfectName(domain)} 的官方站点`;
+        }
         
         // 允许 AI 发明分类，但限制长度以防乱写
         if (!data.siteCategory || data.siteCategory.length > 8) {
