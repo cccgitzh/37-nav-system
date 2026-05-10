@@ -56,34 +56,17 @@ export async function onRequest(context) {
         const isInvalid = isAntiBot || !/[a-zA-Z\u4e00-\u9fa5]{2}/.test(combinedText) || 
                          (combinedText.length < 15 && !/[\u4e00-\u9fa5]/.test(combinedText));
 
-        // 智能图标选择：优先使用网站自身图标，降级到favicon.im
-        let finalIcon = getPerfectFavicon(domain);
         if (meta.iconUrl) {
             try {
-                finalIcon = new URL(meta.iconUrl, siteUrl).href;
+                candidateIcon = new URL(meta.iconUrl, siteUrl).href;
             } catch (e) {
                 // 解析失败，使用默认favicon.im
             }
         }
 
-        // 3. 双擎 AI 深度解析与翻译
-        let aiResult;
+        // 3. 并行执行：双擎 AI 深度解析与翻译 + 图标可用性验证
         if (!env.AI) throw new Error("AI Engine not bound");
 
-        try {
-            aiResult = await env.AI.run('@cf/meta/llama-3.3-70b-instruct-fp8-fast', {
-                messages: [{ role: 'user', content: getPerfectPrompt(cleanMeta, siteUrl, isInvalid) }],
-                temperature: 0, 
-                max_tokens: 256
-            });
-        } catch (e) {
-            console.warn("70B 引擎过载，极速切换至 8B", e);
-            aiResult = await env.AI.run('@cf/meta/llama-3.1-8b-instruct', {
-                messages: [{ role: 'user', content: getPerfectPrompt(cleanMeta, siteUrl, isInvalid) }],
-                temperature: 0, 
-                max_tokens: 256
-            });
-        }
 
         // 4. 终极 JSON 净化与提取
         const result = forceValidate(aiResult, domain);
@@ -113,7 +96,7 @@ export async function onRequest(context) {
 // 【1】强制白名单
 // ==========================================
 function getMandatoryWhiteList() {
-    return whitelist;
+
 }
 
 // ==========================================
@@ -141,9 +124,6 @@ async function fetchSuperMetadata(url) {
     
     for (let i = 0; i < 3; i++) {
         try {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 4500); 
-            
             const res = await fetch(url, { 
                 headers: { 
                     "User-Agent": agents[i],
@@ -152,17 +132,37 @@ async function fetchSuperMetadata(url) {
                     "Cache-Control": "no-cache"
                 }, 
                 redirect: "follow",
-                signal: controller.signal 
+                signal: AbortSignal.timeout(4500)
             });
-            
-            clearTimeout(timeoutId);
 
             if (res.ok) {
+                // 处理字符编码：尝试从 Content-Type 中提取 charset
+                const contentType = res.headers.get("Content-Type") || "";
+                const charsetMatch = contentType.match(/charset=([^;]+)/i);
+                const charset = charsetMatch ? charsetMatch[1].trim().toLowerCase() : "utf-8";
+
                 // 使用 Cloudflare 原生 HTMLRewriter，无视任何属性排序错乱
                 let extracted = { title: '', desc: '', iconUrl: '' };
+
+                // 针对非 UTF-8 编码进行预处理 (Cloudflare HTMLRewriter 仅支持 UTF-8)
+                let responseToTransform = res;
+                if (charset !== "utf-8" && charset !== "utf8") {
+                    try {
+                        const buffer = await res.arrayBuffer();
+                        const decoder = new TextDecoder(charset);
+                        const decodedText = decoder.decode(buffer);
+                        responseToTransform = new Response(decodedText, {
+                            headers: res.headers
+                        });
+                    } catch (e) {
+                        // 解码失败则降级使用原始响应
+                    }
+                }
+
+                let titleChunks = [];
                 const rewriter = new HTMLRewriter()
                     .on('title', {
-                        text(text) { extracted.title += text.text; }
+                        text(text) { titleChunks.push(text.text); }
                     })
                     .on('meta', {
                         element(el) {
@@ -170,10 +170,16 @@ async function fetchSuperMetadata(url) {
                             const prop = (el.getAttribute('property') || '').toLowerCase();
                             const content = el.getAttribute('content') || '';
                             
-                            if (name === 'description' && !extracted.desc) extracted.desc = content;
-                            if (prop === 'og:description' && !extracted.desc) extracted.desc = content;
-                            if (prop === 'og:title' && !extracted.title) extracted.title = content;
-                            if (prop === 'og:image' && !extracted.iconUrl) extracted.iconUrl = content;
+                            if ((name === 'description' || name === 'keywords' || prop === 'og:description' || prop === 'twitter:description') && !extracted.desc) {
+                                extracted.desc = content;
+                            }
+                            const hasTitle = extracted.title || titleChunks.length > 0;
+                            if ((prop === 'og:title' || prop === 'twitter:title' || name === 'application-name') && !hasTitle) {
+                                extracted.title = content;
+                            }
+                            if ((prop === 'og:image' || prop === 'twitter:image') && !extracted.iconUrl) {
+                                extracted.iconUrl = content;
+                            }
                         }
                     })
                     // 额外提取link标签中的favicon
@@ -186,7 +192,10 @@ async function fetchSuperMetadata(url) {
                         }
                     });
 
-                await rewriter.transform(res).text();
+                await rewriter.transform(responseToTransform).text();
+                if (titleChunks.length > 0) {
+                    extracted.title += titleChunks.join('');
+                }
                 return extracted;
             }
         } catch (e) {
@@ -199,22 +208,10 @@ async function fetchSuperMetadata(url) {
 // ==========================================
 // 【4】翻译指令锁死 Prompt（整合双分支最佳实践）
 // ==========================================
-function getPerfectPrompt(meta, url, isInvalid) {
+export function getPerfectPrompt(meta, url, isInvalid) {
     const isLackingInfo = isInvalid || !meta.desc || meta.desc.trim().length < 5;
     
-    return `你是一个无情的JSON提取与翻译机器。严格执行以下所有规则，绝对不要输出任何其他文字、解释或Markdown符号！
 
-核心死命令：
-1. 强制中文翻译：无论源数据是英文、日文还是乱码，必须翻译、提炼为纯正的【简体中文】！
-2. siteName：网民最常用的极简称呼（限15个字符内）。国外知名项目保留核心英文。绝对禁止无脑添加"站"字！注意分析子域名（例如 music.youtube.com 应该是 YouTube Music）。
-3. siteDesc：【最高优先级】一句话中文简介（限30个汉字以内）。纯人话，一针见血，禁止机器腔（禁止出现"这是一个提供..."）。
-   如果提供的数据为空、无意义、包含防爬虫验证，或者"是否缺乏有效描述信息"为true，必须彻底忽略原始数据！
-   请直接根据网址（${url}）和它的知名度，从你的知识库中写一句精准的中文介绍！绝对不要输出"暂无简介"！
-4. siteCategory：必须从 [视频音乐, 论坛, 探索基地, 购物, 知识, 技术, 生活, 通讯, AI人工智能, 实用工具, 设计, 开发者] 中选择一个最贴切的。
-   如果没有合适的，可以自行发明一个2到4个字的精准中文分类。
-
-输出格式严格如下：
-{"siteName": "网站名称", "siteDesc": "一句话中文简介", "siteCategory": "分类"}
 
 待处理源数据：
 标题: ${meta.title}
@@ -226,29 +223,21 @@ function getPerfectPrompt(meta, url, isInvalid) {
 // ==========================================
 // 【5】终极强制校验（整合双分支逻辑）
 // ==========================================
-function forceValidate(aiRes, domain) {
+export function forceValidate(aiRes, domain) {
     try {
-        let jsonStr = aiRes.response || "";
+        const jsonStr = aiRes.response || "";
+        const start = jsonStr.indexOf('{');
+        const end = jsonStr.lastIndexOf('}');
 
-        // 尝试修复被截断或带有奇怪字符的JSON
-        let jsonMatch = jsonStr.match(/\{[\s\S]*\}/);
-        if (!jsonMatch) throw new Error("No JSON found");
-
-        let data;
-        try {
-            data = JSON.parse(jsonMatch[0]);
-        } catch(e) {
-            // 如果解析失败，尝试去掉可能的尾部垃圾字符
-            let cleanStr = jsonMatch[0].replace(/}[^}]*$/, '}');
-            data = JSON.parse(cleanStr);
+        if (start === -1 || end === -1 || end < start) {
+            throw new Error("No JSON structure found in response");
         }
-        
+
+
         data.siteName = (data.siteName || guessPerfectName(domain)).slice(0, 20); 
         data.siteDesc = (data.siteDesc || "暂无简介").slice(0, 50);
 
-        // 强制替换AI偷懒输出的"暂无简介"
-        if (data.siteDesc === "暂无简介") {
-            data.siteDesc = `访问 ${guessPerfectName(domain)} 的官方站点`;
+
         }
         
         // 移除机器腔前缀
@@ -276,14 +265,44 @@ function forceValidate(aiRes, domain) {
 // ==========================================
 function guessPerfectName(domain) {
     if(!domain) return "未知站点";
+
+    // 排除常见前缀
+    const parts = domain.split('.').filter(p => !['www', 'm', 'mobile', 'mail'].includes(p.toLowerCase()));
+
+    // 尝试提取最有意义的部分
+    // 如果是 sub.domain.com，优先取 sub domain
+    if (parts.length >= 2) {
+        const tldParts = ['com', 'net', 'org', 'edu', 'gov', 'cn', 'me', 'io', 'cc', 'tv', 'ai', 'app', 'dev', 'info', 'xyz'];
+        let significantParts = [];
+
+        for (let i = 0; i < parts.length; i++) {
+            if (tldParts.includes(parts[i].toLowerCase())) break;
+            significantParts.push(parts[i]);
+        }
+
+        if (significantParts.length > 0) {
+            return significantParts.map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' ');
+        }
+    }
+
     const main = getRootDomain(domain).split(".")[0];
     return main.charAt(0).toUpperCase() + main.slice(1);
 }
 
-function getRootDomain(d) { 
+export function getRootDomain(d) {
     if(!d) return "";
     const p = d.split('.'); 
-    return p.length >= 2 ? `${p[p.length-2]}.${p[p.length-1]}` : d; 
+    if (p.length < 2) return d;
+
+    // 处理 .com.cn / .net.cn 等双重后缀
+    const doubleSuffixes = ['com.cn', 'net.cn', 'org.cn', 'gov.cn', 'edu.cn'];
+    const lastTwo = `${p[p.length-2]}.${p[p.length-1]}`.toLowerCase();
+
+    if (doubleSuffixes.includes(lastTwo) && p.length >= 3) {
+        return `${p[p.length-3]}.${lastTwo}`;
+    }
+
+    return `${p[p.length-2]}.${p[p.length-1]}`;
 }
 
 function cleanText(m) { 
@@ -291,7 +310,7 @@ function cleanText(m) {
     return { title: c(m.title), desc: c(m.desc) }; 
 }
 
-function extractDomain(u) { 
+export function extractDomain(u) {
     try { return new URL(u.startsWith("http") ? u : `https://${u}`).hostname; } 
     catch { return ""; } 
 }
