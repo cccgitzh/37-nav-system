@@ -110,7 +110,7 @@ export async function onRequest(context) {
 // ==========================================
 // 【1】强制白名单
 // ==========================================
-function getMandatoryWhiteList() {
+export function getMandatoryWhiteList() {
     return {
         "bilibili.com": { siteName: "B站", siteDesc: "动漫番剧弹幕视频，追剧看番超全", siteCategory: "视频音乐" },
         "v2ex.com": { siteName: "V站", siteDesc: "程序员极客社区，聊科技数码干货", siteCategory: "论坛" },
