@@ -212,12 +212,7 @@
     <div id="sys-modal-root"></div>
 
     <script>
-        const esc = (str) => String(str || "").replace(/[&<>"']/g, s => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[s]));
-        const sanitizeUrl = (url) => {
-            const low = String(url || "").trim().toLowerCase();
-            if (low.startsWith('javascript:') || low.startsWith('data:text/html')) return 'about:blank';
-            return url;
-        };
+
         const SysUI = {
             createContainer(id) {
                 const existing = document.getElementById(id);
@@ -385,8 +380,9 @@
                     }
 
                     if (targetImgUrl) {
+                        targetImgUrl = sanitizeUrl(targetImgUrl);
                         iconHTML = `
-                            <img src="${esc(sanitizeUrl(targetImgUrl))}" loading="lazy" alt="icon" class="card-icon bg-white/5 p-1 ring-1 ring-white/10" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+
                             <i class="fa-solid fa-globe card-icon hidden items-center justify-center text-[34px] text-dracula-fg"></i>`;
 
                         const hiddenImg = new Image();
