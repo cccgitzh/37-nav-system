@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert';
 
-});
+
 
 test('getRootDomain - empty/null/undefined', () => {
     assert.strictEqual(getRootDomain(''), '');
@@ -28,4 +28,7 @@ test('getRootDomain - multi-level subdomain', () => {
 
 test('getRootDomain - with numbers', () => {
     assert.strictEqual(getRootDomain('127.0.0.1'), '0.1'); // Current logic: splits by '.' and takes last two.
+});
+
+
 });
