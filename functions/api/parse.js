@@ -328,7 +328,7 @@ function forceValidate(aiRes, domain) {
 // ==========================================
 // 【6】首字母大写盲猜兜底
 // ==========================================
-function guessPerfectName(domain) {
+export function guessPerfectName(domain) {
     if(!domain) return "未知站点";
 
     // 排除常见前缀
