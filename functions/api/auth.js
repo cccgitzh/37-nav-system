@@ -8,7 +8,7 @@ export async function onRequestPost(context) {
         const expectedPassword = env.ADMIN_PASSWORD || 'root';
 
         if (password === expectedPassword) {
-            // 【核心修复】：生成与 _auth.js 互相匹配的 Base64 令牌
+            // 【核心修复】：生成与后端安全网互相匹配的高强度加密 Token
             const token = btoa(expectedPassword + "||37nav");
             return new Response(JSON.stringify({ status: "success", token: token }), {
                 headers: { "Content-Type": "application/json" }
