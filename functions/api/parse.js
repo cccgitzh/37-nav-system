@@ -65,41 +65,6 @@ export async function onRequest(context) {
         // 3. 并行执行：双擎 AI 深度解析与翻译 + 图标可用性验证
         if (!env.AI) throw new Error("AI Engine not bound");
 
-        const aiPromise = (async () => {
-            try {
-                return await env.AI.run('@cf/meta/llama-3.3-70b-instruct-fp8-fast', {
-                    messages: [{ role: 'user', content: getPerfectPrompt(cleanMeta, siteUrl, isInvalid) }],
-                    temperature: 0,
-                    max_tokens: 256
-                });
-            } catch (e) {
-                console.warn("70B 引擎过载，极速切换至 8B", e);
-                return await env.AI.run('@cf/meta/llama-3.1-8b-instruct', {
-                    messages: [{ role: 'user', content: getPerfectPrompt(cleanMeta, siteUrl, isInvalid) }],
-                    temperature: 0,
-                    max_tokens: 256
-                });
-            }
-        })();
-
-        const iconPromise = (async () => {
-            // 如果是完美图标回调（来自我们自己的 API 或者确信稳定的接口），可能不需要验证，但如果是抓取的 URL，则验证可用性
-            try {
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 2000);
-                const res = await fetch(candidateIcon, { method: 'HEAD', signal: controller.signal });
-                clearTimeout(timeoutId);
-                if (res.ok) {
-                    return candidateIcon;
-                }
-            } catch (e) {
-                // 网络错误或超时
-            }
-            // 验证失败，降级
-            return getPerfectFavicon(domain);
-        })();
-
-        const [aiResult, finalIcon] = await Promise.all([aiPromise, iconPromise]);
 
         // 4. 终极 JSON 净化与提取
         const result = forceValidate(aiResult, domain);
@@ -182,9 +147,6 @@ async function fetchSuperMetadata(url) {
     
     for (let i = 0; i < 3; i++) {
         try {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 4500); 
-            
             const res = await fetch(url, { 
                 headers: { 
                     "User-Agent": agents[i],
@@ -193,10 +155,8 @@ async function fetchSuperMetadata(url) {
                     "Cache-Control": "no-cache"
                 }, 
                 redirect: "follow",
-                signal: controller.signal 
+                signal: AbortSignal.timeout(4500)
             });
-            
-            clearTimeout(timeoutId);
 
             if (res.ok) {
                 // 处理字符编码：尝试从 Content-Type 中提取 charset
@@ -275,6 +235,7 @@ export function getPerfectPrompt(meta, url, isInvalid) {
     const isLackingInfo = isInvalid || !meta.desc || meta.desc.trim().length < 5;
     
 
+
 待处理源数据：
 标题: ${meta.title}
 描述: ${meta.desc}
@@ -287,14 +248,15 @@ export function getPerfectPrompt(meta, url, isInvalid) {
 // ==========================================
 function forceValidate(aiRes, domain) {
     try {
-        let jsonStr = aiRes.response || "";
+        const jsonStr = aiRes.response || "";
+        const start = jsonStr.indexOf('{');
+        const end = jsonStr.lastIndexOf('}');
 
-        // 尝试修复被截断或带有奇怪字符的JSON
-        let jsonMatch = jsonStr.match(/\{[\s\S]*\}/);
-        if (!jsonMatch) throw new Error("No JSON found");
+        if (start === -1 || end === -1 || end < start) {
+            throw new Error("No JSON structure found in response");
+        }
 
 
-        
         data.siteName = (data.siteName || guessPerfectName(domain)).slice(0, 20); 
         data.siteDesc = (data.siteDesc || "暂无简介").slice(0, 50);
 
