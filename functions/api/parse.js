@@ -370,7 +370,7 @@ export function getRootDomain(d) {
     return `${p[p.length-2]}.${p[p.length-1]}`;
 }
 
-function cleanText(m) { 
+export function cleanText(m) {
     const c = s => (s || "").replace(/[\r\n\t]+/g, " ").replace(/\s{2,}/g, " ").trim(); 
     return { title: c(m.title), desc: c(m.desc) }; 
 }
