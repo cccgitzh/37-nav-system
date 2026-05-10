@@ -1,9 +1,12 @@
 // functions/api/nodes.js
 // 搭载主动强同步预热 (Strict Cache Warming) 与 ETag 短路引擎
-import { warmUpGenericCache } from './_cache.js';
 
 async function warmUpCache(env) {
-    return warmUpGenericCache(env, "SELECT * FROM links ORDER BY id DESC", "all_links_data", "v");
+    const { results } = await env.DB.prepare("SELECT * FROM links ORDER BY id DESC").all();
+    const jsonString = JSON.stringify(results);
+    const etag = '"v-' + Date.now().toString(36) + '"';
+    await env.KV_CACHE.put("all_links_data", jsonString, { metadata: { etag } });
+    return { jsonString, etag };
 }
 
 export async function onRequestGet(context) {
