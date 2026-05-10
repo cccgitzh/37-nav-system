@@ -130,24 +130,25 @@ export async function onRequest(context) {
 // ==========================================
 function getMandatoryWhiteList() {
     return {
-        // 谷歌系子域名精准切割
-        "mail.google.com": { name: "谷歌邮箱 (Gmail)", desc: "安全高效的免费电子邮件服务。" },
-        "drive.google.com": { name: "谷歌云盘 (Google Drive)", desc: "谷歌提供的云端文件存储与协作平台。" },
-        "docs.google.com": { name: "Google 文档", desc: "在线文档编辑与团队协作工具。" },
-        "analytics.google.com": { name: "Google Analytics", desc: "网站流量统计与核心数据分析工具。" },
-        "gemini.google.com": { name: "Gemini", desc: "Google 旗下原生多模态人工智能大模型。", category: "AI人工智能" },
-        // 苹果系子域名
-        "developer.apple.com": { name: "苹果开发者中心", desc: "Apple 官方开发者资源、文档与应用管理平台。" },
-        // 国内外大站本土化俗称
-        "bilibili.com": { name: "B站", desc: "国内知名的年轻世代弹幕视频社区。", category: "视频音乐" },
-        "youtube.com": { name: "油管 (YouTube)", desc: "全球最大的流媒体视频分享生态。", category: "视频音乐" },
-        "twitter.com": { name: "推特 (X)", desc: "全球实时社交与资讯网络。" },
-        "x.com": { name: "推特 (X)", desc: "全球实时社交与资讯网络。" },
-        "instagram.com": { name: "ins (照片墙)", desc: "全球知名的图片与短视频生活分享平台。" },
-        "facebook.com": { name: "脸书 (FB)", desc: "全球最大的综合性社交网络平台。" },
-        "weibo.com": { name: "微博", desc: "随时随地发现新鲜事，热点资讯吃瓜平台。" },
-        "zhihu.com": { name: "知乎", desc: "高质量中文问答社区与创作者聚集地。" },
-        "github.com": { name: "GitHub", desc: "全球最大的开源代码托管与协作平台。" }
+        "bilibili.com": { siteName: "B站", siteDesc: "动漫番剧弹幕视频，追剧看番超全", siteCategory: "视频音乐" },
+        "v2ex.com": { siteName: "V站", siteDesc: "程序员极客社区，聊科技数码干货", siteCategory: "论坛" },
+        "taobao.com": { siteName: "淘宝", siteDesc: "综合网购平台，啥都能买超方便", siteCategory: "购物" },
+        "zhihu.com": { siteName: "知乎", siteDesc: "知识问答社区，看干货涨见识", siteCategory: "论坛" },
+        "github.com": { siteName: "GitHub", siteDesc: "全球最大开源代码托管与协作平台", siteCategory: "探索基地" },
+        "youtube.com": { siteName: "油管", siteDesc: "全球最大的流媒体视频分享生态", siteCategory: "视频音乐" },
+        "xiaohongshu.com": { siteName: "小红书", siteDesc: "种草攻略社区，吃喝玩乐全搞定", siteCategory: "论坛" },
+        "baidu.com": { siteName: "百度", siteDesc: "中文搜索引擎，查东西超好用", siteCategory: "探索基地" },
+        "weibo.com": { siteName: "微博", siteDesc: "热点吃瓜平台，最新资讯全掌握", siteCategory: "论坛" },
+        "douyin.com": { siteName: "抖音", siteDesc: "短视频平台，刷视频停不下来", siteCategory: "视频音乐" },
+        "pan.baidu.com": { siteName: "百度网盘", siteDesc: "云存储工具，文件备份分享神器", siteCategory: "探索基地" },
+        "mail.qq.com": { siteName: "QQ邮箱", siteDesc: "腾讯邮箱，收发邮件超便捷", siteCategory: "通讯" },
+        "csdn.net": { siteName: "CSDN", siteDesc: "程序员博客，编程学习干货超多", siteCategory: "探索基地" },
+        "acfun.cn": { siteName: "A站", siteDesc: "二次元弹幕视频，番剧资源齐全", siteCategory: "视频音乐" },
+        "tieba.baidu.com": { siteName: "贴吧", siteDesc: "兴趣交流社区，找到志同道合的人", siteCategory: "论坛" },
+        "mail.google.com": { siteName: "谷歌邮箱", siteDesc: "安全高效的免费电子邮件服务", siteCategory: "通讯" },
+        "gemini.google.com": { siteName: "Gemini", siteDesc: "Google 旗下原生多模态人工智能大模型", siteCategory: "AI人工智能" },
+        "chatgpt.com": { siteName: "ChatGPT", siteDesc: "OpenAI 旗下的现象级 AI 聊天机器人", siteCategory: "AI人工智能" },
+        "dash.cloudflare.com": { siteName: "CF 控制台", siteDesc: "全球领先的边缘计算与 CDN 管理平台", siteCategory: "探索基地" }
     };
 }
 
@@ -189,22 +190,8 @@ async function fetchSuperMetadata(url) {
             clearTimeout(timeoutId);
 
             if (res.ok) {
-                // 【10. 资源耗尽防护】只读取前 128KB (131072 bytes) 的流数据，不下载全站
-                const reader = res.body.getReader();
-                const decoder = new TextDecoder("utf-8");
-                let htmlStr = "";
-                let bytesRead = 0;
-
-                while (true) {
-                    const { done, value } = await reader.read();
-                    if (done || bytesRead > 131072) break;
-                    htmlStr += decoder.decode(value, { stream: true });
-                    bytesRead += value.length;
-                }
-                reader.releaseLock();
-
-                // 使用原生 HTMLRewriter 提取，无视所有混淆的属性排序
-                let extracted = { title: '', desc: '' };
+                // 使用 Cloudflare 原生 HTMLRewriter，无视任何属性排序错乱
+                let extracted = { title: '', desc: '', iconUrl: '' };
                 const rewriter = new HTMLRewriter()
                     .on('title', { text(text) { extracted.title += text.text; } })
                     .on('meta', {
@@ -212,12 +199,15 @@ async function fetchSuperMetadata(url) {
                             const name = (el.getAttribute('name') || '').toLowerCase();
                             const prop = (el.getAttribute('property') || '').toLowerCase();
                             const content = el.getAttribute('content') || '';
-                            if ((name === 'description' || prop === 'og:description') && !extracted.desc) extracted.desc = content;
+                            
+                            if (name === 'description' && !extracted.desc) extracted.desc = content;
+                            if (prop === 'og:description' && !extracted.desc) extracted.desc = content;
                             if (prop === 'og:title' && !extracted.title) extracted.title = content;
+                            if (prop === 'og:image' && !extracted.iconUrl) extracted.iconUrl = content;
                         }
                     });
 
-                await rewriter.transform(new Response(htmlStr)).text();
+                await rewriter.transform(res).text();
                 return extracted;
             }
         } catch (e) {
@@ -233,24 +223,25 @@ async function fetchSuperMetadata(url) {
 function getPerfectPrompt(meta, domain, isInvalid) {
     const isGithubIo = domain.endsWith('github.io');
     
-    return `你是一个部署在边缘节点的智能网站信息提取器。你需要输出纯 JSON。
-【核心规则】：
-1. 提取名称 (name)：
-   - 提取该网站最核心的品牌名。优先使用中国大陆的本土化俗称（如 Facebook 叫 脸书/FB）。
-   - 【极其重要】：如果遇到类似 \`analytics.google.com\` 这样的大厂二级域名，必须精确识别出子产品名（Google Analytics），绝对不能笼统叫 Google。
-   - 如果是 \`${domain}\` 且以 github.io 结尾，识别为“XXX的 GitHub Pages”。
-   - 如果网页全是乱码或反爬虫验证，直接根据域名 \`${domain}\` 的拼音/英文在你的知识库里盲猜品牌名！绝对不要加"站"字！
-2. 提取介绍 (description)：
-   - 使用简体中文提炼一段 50~120 字的简介，说明核心功能或定位。
-   - 对境外网站，必须完全中文化，避免直接返回大段英文。避免使用“这是一个提供...”之类的机器语。
-   - 如果网页被防火墙拦截，强行根据 \`${domain}\` 的知名度在知识库中自己写一段中文介绍。如果不认识该域名，填写"暂无介绍"。
-3. 严格 JSON 输出：{"name": "网站名称", "description": "简体中文介绍"}。不要任何 Markdown 标记。
+    return `你是一个无情的JSON提取与翻译机器。严格执行以下所有规则，绝对不要输出任何其他文字、解释或Markdown符号！
 
-源数据：
-域名: ${domain}
-爬取标题: ${meta.title}
-爬取描述: ${meta.desc}
-是否被反爬拦截: ${isInvalid}`;
+核心死命令：
+1. 强制中文翻译：无论源数据是英文、日文还是乱码，必须翻译、提炼为纯正的【简体中文】！
+2. siteName：网民最常用的极简称呼（限15个字符内）。国外知名项目保留核心英文。绝对禁止无脑添加"站"字！注意分析子域名（例如 music.youtube.com 应该是 YouTube Music）。
+3. siteDesc：【最高优先级】一句话中文简介（限30个汉字以内）。纯人话，一针见血，禁止机器腔（禁止出现"这是一个提供..."）。
+   如果提供的数据为空、无意义、包含防爬虫验证，或者"是否缺乏有效描述信息"为true，必须彻底忽略原始数据！
+   请直接根据网址（${url}）和它的知名度，从你的知识库中写一句精准的中文介绍！绝对不要输出"暂无简介"！
+4. siteCategory：必须从 [视频音乐, 论坛, 探索基地, 购物, 知识, 技术, 生活, 通讯, AI人工智能, 实用工具, 设计, 开发者] 中选择一个最贴切的。
+   如果没有合适的，可以自行发明一个2到4个字的精准中文分类。
+
+输出格式严格如下：
+{"siteName": "网站名称", "siteDesc": "一句话中文简介", "siteCategory": "分类"}
+
+待处理源数据：
+标题: ${meta.title}
+描述: ${meta.desc}
+网址: ${url}
+是否缺乏有效描述信息: ${isLackingInfo}`;
 }
 
 // ==========================================
@@ -285,16 +276,25 @@ function forceValidate(aiRes, domain) {
 // 工具函数
 // ==========================================
 function guessPerfectName(domain) {
-    if(!domain) return "未知网站";
-    let main = domain.split(".")[0];
-    if (domain.includes('github.io')) main = domain.replace('.github.io', '') + ' 的博客';
+    if(!domain) return "未知站点";
+    const main = getRootDomain(domain).split(".")[0];
     return main.charAt(0).toUpperCase() + main.slice(1);
 }
 
-function getRootDomain(d) { 
+export function getRootDomain(d) {
     if(!d) return "";
     const p = d.split('.'); 
-    return p.length >= 2 ? `${p[p.length-2]}.${p[p.length-1]}` : d; 
+    if (p.length < 2) return d;
+
+    // 处理 .com.cn / .net.cn 等双重后缀
+    const doubleSuffixes = ['com.cn', 'net.cn', 'org.cn', 'gov.cn', 'edu.cn'];
+    const lastTwo = `${p[p.length-2]}.${p[p.length-1]}`.toLowerCase();
+
+    if (doubleSuffixes.includes(lastTwo) && p.length >= 3) {
+        return `${p[p.length-3]}.${lastTwo}`;
+    }
+
+    return `${p[p.length-2]}.${p[p.length-1]}`;
 }
 
 function cleanText(m) { 

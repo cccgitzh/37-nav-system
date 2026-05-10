@@ -282,8 +282,9 @@
         const draculaColors = ['#8BE9FD', '#50FA7B', '#FF79C6', '#BD93F9', '#FF5555', '#F1FA8C', '#FFB86C'];
 
         function getHashColor(str) {
+            if (!str) return '#6272A4';
             let hash = 0;
-            for (let i = 0; i < str.length; i++) { hash = str.charCodeAt(i) + ((hash << 5) - hash); }
+            for (let i = 0, len = str.length; i < len; i++) { hash = str.charCodeAt(i) + ((hash << 5) - hash); }
             return draculaColors[Math.abs(hash) % draculaColors.length];
         }
 
