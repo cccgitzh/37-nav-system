@@ -288,14 +288,9 @@ function forceValidate(aiRes, domain) {
         let jsonMatch = jsonStr.match(/\{[\s\S]*\}/);
         if (!jsonMatch) throw new Error("No JSON found");
 
-        let data;
-        try {
-            data = JSON.parse(jsonMatch[0]);
-        } catch(e) {
-            // 如果解析失败，尝试去掉可能的尾部垃圾字符
-            let cleanStr = jsonMatch[0].replace(/}[^}]*$/, '}');
-            data = JSON.parse(cleanStr);
-        }
+        // 去掉可能的尾部垃圾字符
+        let cleanStr = jsonMatch[0].replace(/}[^}]*$/, '}');
+        let data = JSON.parse(cleanStr);
         
         data.siteName = (data.siteName || guessPerfectName(domain)).slice(0, 20); 
         data.siteDesc = (data.siteDesc || "暂无简介").slice(0, 50);
