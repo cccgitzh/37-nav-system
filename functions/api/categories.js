@@ -1,12 +1,9 @@
 // functions/api/categories.js
 // 搭载主动强同步预热 (Strict Cache Warming) 与 ETag 短路引擎
+import { warmUpGenericCache } from './_cache.js';
 
 async function warmUpCatCache(env) {
-    const { results } = await env.DB.prepare("SELECT * FROM categories ORDER BY sort_order ASC, id ASC").all();
-    const jsonString = JSON.stringify(results);
-    const etag = '"cat-' + Date.now().toString(36) + '"';
-    await env.KV_CACHE.put("all_categories_data", jsonString, { metadata: { etag } });
-    return { jsonString, etag };
+    return warmUpGenericCache(env, "SELECT * FROM categories ORDER BY sort_order ASC, id ASC", "all_categories_data", "cat");
 }
 
 export async function onRequestGet(context) {
