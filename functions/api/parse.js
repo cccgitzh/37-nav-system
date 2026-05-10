@@ -280,7 +280,7 @@ function getPerfectPrompt(meta, url, isInvalid) {
 // ==========================================
 // 【5】终极强制校验（整合双分支逻辑）
 // ==========================================
-function forceValidate(aiRes, domain) {
+export function forceValidate(aiRes, domain) {
     try {
         let jsonStr = aiRes.response || "";
 
