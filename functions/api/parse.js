@@ -248,7 +248,7 @@ async function fetchSuperMetadata(url) {
 // ==========================================
 // 【4】翻译指令锁死 Prompt（整合双分支最佳实践）
 // ==========================================
-function getPerfectPrompt(meta, url, isInvalid) {
+export function getPerfectPrompt(meta, url, isInvalid) {
     const isLackingInfo = isInvalid || !meta.desc || meta.desc.trim().length < 5;
     
     return `你是一个顶级的国际化互联网产品专家。你的任务是基于提供的元数据，为导航站点提取并翻译出最精准的中文信息。
