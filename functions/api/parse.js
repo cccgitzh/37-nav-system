@@ -220,8 +220,13 @@ async function fetchSuperMetadata(url) {
 // ==========================================
 // 【2 & 6. 严苛的指令下达 Prompt】
 // ==========================================
+<<<<<<< HEAD
 function getPerfectPrompt(meta, domain, isInvalid) {
     const isGithubIo = domain.endsWith('github.io');
+=======
+export function getPerfectPrompt(meta, url, isInvalid) {
+    const isLackingInfo = isInvalid || !meta.desc || meta.desc.trim().length < 5;
+>>>>>>> 77c1075c551b7a43d2d22fcbd487885ff8ae009a
     
     return `你是一个无情的JSON提取与翻译机器。严格执行以下所有规则，绝对不要输出任何其他文字、解释或Markdown符号！
 
