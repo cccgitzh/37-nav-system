@@ -102,7 +102,7 @@ function getMandatoryWhiteList() {
 // ==========================================
 // 【2】Favicon 智能获取（基于favicon.im官方文档优化）
 // ==========================================
-function getPerfectFavicon(domain) {
+export function getPerfectFavicon(domain) {
     if (!domain || domain === 'default') {
         // 默认图标：使用favicon.im的默认回退
         return 'https://favicon.im/default';

@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert';
 
 
+
 test('getRootDomain - empty/null/undefined', () => {
     assert.strictEqual(getRootDomain(''), '');
     assert.strictEqual(getRootDomain(null), '');
