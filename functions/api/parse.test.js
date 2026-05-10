@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert';
-import { getRootDomain, extractDomain } from './parse.js';
+
 
 test('getRootDomain - empty/null/undefined', () => {
     assert.strictEqual(getRootDomain(''), '');

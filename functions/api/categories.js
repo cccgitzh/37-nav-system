@@ -1,12 +1,9 @@
 // functions/api/categories.js
 // 搭载主动强同步预热 (Strict Cache Warming) 与 ETag 短路引擎
+import { warmUpGenericCache } from './_cache.js';
 
 async function warmUpCatCache(env) {
-    const { results } = await env.DB.prepare("SELECT * FROM categories ORDER BY sort_order ASC, id ASC").all();
-    const jsonString = JSON.stringify(results);
-    const etag = '"cat-' + Date.now().toString(36) + '"';
-    await env.KV_CACHE.put("all_categories_data", jsonString, { metadata: { etag } });
-    return { jsonString, etag };
+    return warmUpGenericCache(env, "SELECT * FROM categories ORDER BY sort_order ASC, id ASC", "all_categories_data", "cat");
 }
 
 export async function onRequestGet(context) {
@@ -41,8 +38,28 @@ export async function onRequestPost(context) {
 export async function onRequestPut(context) {
     const data = await context.request.json();
     if (Array.isArray(data)) {
-        const statements = data.map((item, index) => context.env.DB.prepare("UPDATE categories SET sort_order = ? WHERE id = ?").bind(index, item.id));
-        await context.env.DB.batch(statements);
+        if (data.length > 0) {
+            const chunkSize = 50; // Cloudflare D1 maximum bound parameters limit is 100 per query. We use 2 params per item.
+            const statements = [];
+
+            for (let i = 0, len = data.length; i < len; i += chunkSize) {
+                const chunk = data.slice(i, i + chunkSize);
+                const placeholders = [];
+                const params = [];
+
+                for (let j = 0, chunkLen = chunk.length; j < chunkLen; j++) {
+                    placeholders.push(`(?, ?)`);
+                    params.push(chunk[j].id, i + j);
+                }
+
+                const sql = `WITH updated(id, sort_order) AS (VALUES ${placeholders.join(', ')}) UPDATE categories SET sort_order = updated.sort_order FROM updated WHERE categories.id = updated.id`;
+                statements.push(context.env.DB.prepare(sql).bind(...params));
+            }
+
+            if (statements.length > 0) {
+                await context.env.DB.batch(statements);
+            }
+        }
     } else {
         const { id, name } = data;
         await context.env.DB.prepare("UPDATE categories SET name = ? WHERE id = ?").bind(name, id).run();
