@@ -54,8 +54,6 @@ export async function onRequest(context) {
         const isInvalid = isAntiBot || !/[a-zA-Z\u4e00-\u9fa5]{2}/.test(combinedText) || 
                          (combinedText.length < 15 && !/[\u4e00-\u9fa5]/.test(combinedText));
 
-        // 智能图标选择：优先使用网站自身图标，降级到favicon.im
-        let candidateIcon = getPerfectFavicon(domain);
         if (meta.iconUrl) {
             try {
                 candidateIcon = new URL(meta.iconUrl, siteUrl).href;
@@ -276,24 +274,6 @@ async function fetchSuperMetadata(url) {
 export function getPerfectPrompt(meta, url, isInvalid) {
     const isLackingInfo = isInvalid || !meta.desc || meta.desc.trim().length < 5;
     
-    return `你是一个顶级的国际化互联网产品专家。你的任务是基于提供的元数据，为导航站点提取并翻译出最精准的中文信息。
-
-严格执行以下规则：
-1. 【强制简体中文】：无论输入是什么语言，输出必须是自然、流畅、准确的简体中文。
-2. 【siteName 极简主义】：
-   - 国内站点：使用网民最熟悉的中文简称（如 "百度" 而非 "百度一下，你就知道"）。
-   - 国外站点：保留核心英文名称（如 "GitHub", "YouTube"），或使用公认的中文名。
-   - 严禁后缀：除非是名称一部分，否则严禁带有 "官网"、"首页"、"官方网站" 等词汇。
-3. 【siteDesc 降维打击】：
-   - 限制在 30 个汉字以内。
-   - 风格：专业、干练、有人气，禁止机器翻译腔。
-   - 如果原始数据质量极低（isLackingInfo=true），请完全忽略原始描述，直接根据网址 ${url} 的知名度和你的知识储备生成一段精辟的中文介绍。
-4. 【siteCategory 智能归类】：
-   - 必须从以下列表中选择：[视频音乐, 论坛, 探索基地, 购物, 知识, 技术, 生活, 通讯, AI人工智能, 实用工具, 设计, 开发者, 财经, 游戏, 社交]。
-   - 如果都不符合，请根据站点属性归纳一个 2-4 字的中文分类。
-
-输出格式必须是纯 JSON，严禁任何 Markdown 标记或多余文字：
-{"siteName": "名称", "siteDesc": "一句话精辟简介", "siteCategory": "分类"}
 
 待处理源数据：
 标题: ${meta.title}
@@ -313,16 +293,12 @@ function forceValidate(aiRes, domain) {
         let jsonMatch = jsonStr.match(/\{[\s\S]*\}/);
         if (!jsonMatch) throw new Error("No JSON found");
 
-        // 去掉可能的尾部垃圾字符
-        let cleanStr = jsonMatch[0].replace(/}[^}]*$/, '}');
-        let data = JSON.parse(cleanStr);
+
         
         data.siteName = (data.siteName || guessPerfectName(domain)).slice(0, 20); 
         data.siteDesc = (data.siteDesc || "暂无简介").slice(0, 50);
 
-        // 强制替换AI偷懒输出的"暂无简介"
-        if (data.siteDesc === "暂无简介") {
-            data.siteDesc = `访问 ${guessPerfectName(domain)} 的官方站点`;
+
         }
         
         // 移除机器腔前缀
