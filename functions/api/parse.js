@@ -375,7 +375,7 @@ function cleanText(m) {
     return { title: c(m.title), desc: c(m.desc) }; 
 }
 
-function extractDomain(u) { 
+export function extractDomain(u) {
     try { return new URL(u.startsWith("http") ? u : `https://${u}`).hostname; } 
     catch { return ""; } 
 }
