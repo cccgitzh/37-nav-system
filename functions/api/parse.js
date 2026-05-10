@@ -224,9 +224,10 @@ async function fetchSuperMetadata(url) {
                     }
                 }
 
+                let titleChunks = [];
                 const rewriter = new HTMLRewriter()
                     .on('title', {
-                        text(text) { extracted.title += text.text; }
+                        text(text) { titleChunks.push(text.text); }
                     })
                     .on('meta', {
                         element(el) {
@@ -237,7 +238,8 @@ async function fetchSuperMetadata(url) {
                             if ((name === 'description' || name === 'keywords' || prop === 'og:description' || prop === 'twitter:description') && !extracted.desc) {
                                 extracted.desc = content;
                             }
-                            if ((prop === 'og:title' || prop === 'twitter:title' || name === 'application-name') && !extracted.title) {
+                            const hasTitle = extracted.title || titleChunks.length > 0;
+                            if ((prop === 'og:title' || prop === 'twitter:title' || name === 'application-name') && !hasTitle) {
                                 extracted.title = content;
                             }
                             if ((prop === 'og:image' || prop === 'twitter:image') && !extracted.iconUrl) {
@@ -256,6 +258,9 @@ async function fetchSuperMetadata(url) {
                     });
 
                 await rewriter.transform(responseToTransform).text();
+                if (titleChunks.length > 0) {
+                    extracted.title += titleChunks.join('');
+                }
                 return extracted;
             }
         } catch (e) {
