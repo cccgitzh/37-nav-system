@@ -451,8 +451,26 @@
             if (isAdmin) { sessionStorage.removeItem('sys_op_token'); isAdmin = false; } 
             else { 
                 const pwd = await SysUI.showPrompt('系统鉴权 (SYS_AUTH)', '请输入超级管理员密钥:', 'password');
-                if (pwd === 'root') { sessionStorage.setItem('sys_op_token', 'AUTHORIZED'); isAdmin = true; } 
-                else if (pwd !== null) { await SysUI.showConfirm('拦截警告', '密钥无效，操作被系统拒绝。', true); }
+                if (pwd !== null) {
+                    try {
+                        const res = await fetch('/api/auth', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ password: pwd })
+                        });
+                        if (res.ok) {
+                            const data = await res.json();
+                            if (data.status === 'success') {
+                                sessionStorage.setItem('sys_op_token', data.token);
+                                isAdmin = true;
+                            }
+                        } else {
+                            await SysUI.showConfirm('拦截警告', '密钥无效，操作被系统拒绝。', true);
+                        }
+                    } catch (e) {
+                        await SysUI.showConfirm('系统错误', '无法连接鉴权服务器。', true);
+                    }
+                }
             }
             updateAdminUI();
         });
