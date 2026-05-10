@@ -1,3 +1,17 @@
+const fetchSecure = async (url, options = {}) => {
+            const token = sessionStorage.getItem('sys_op_token');
+            const headers = { ...options.headers };
+            if (token) headers['Authorization'] = `Bearer ${token}`;
+            if (!headers['Content-Type'] && options.body) headers['Content-Type'] = 'application/json';
+            
+            const res = await fetch(url, { ...options, headers });
+            if (res.status === 401) {
+                alert("控制台令牌失效，请返回主枢纽重新 SYS_OP 认证。");
+                window.location.href = '/';
+            }
+            return res;
+        };
+
         const SysUI = {
             createContainer(id) {
                 const existing = document.getElementById(id);
@@ -96,7 +110,7 @@
                         const oriHtml = btnParse.innerHTML;
                         btnParse.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; btnParse.disabled = true;
                         try {
-                            const res = await fetch('/api/parse', { method: 'POST', body: JSON.stringify({ url: urlInput }) });
+                            const res = await fetchSecure('/api/parse', { method: 'POST', body: JSON.stringify({ url: urlInput }) });
                             if (res.ok) {
                                 const data = await res.json();
                                 if(data.title) overlay.querySelector('#e-title').value = data.title;
@@ -123,7 +137,7 @@
 
         async function fetchSystemData() {
             try {
-                const [catRes, nodeRes] = await Promise.all([fetch('/api/categories'), fetch('/api/nodes')]);
+                const [catRes, nodeRes] = await Promise.all([fetchSecure('/api/categories'), fetchSecure('/api/nodes')]);
                 globalCategories = await catRes.json();
                 globalNodes = await nodeRes.json();
                 renderCategories();
@@ -159,7 +173,7 @@
                     const item = globalCategories.splice(fromIdx, 1)[0];
                     globalCategories.splice(index, 0, item);
                     renderCategories();
-                    await fetch('/api/categories', { method: 'PUT', body: JSON.stringify(globalCategories) });
+                    await fetchSecure('/api/categories', { method: 'PUT', body: JSON.stringify(globalCategories) });
                 });
                 list.appendChild(tag);
             });
@@ -168,7 +182,7 @@
         async function addCategory() {
             const name = document.getElementById('new-cat-name').value.trim();
             if(!name) return;
-            await fetch('/api/categories', { method: 'POST', body: JSON.stringify({ name }) });
+            await fetchSecure('/api/categories', { method: 'POST', body: JSON.stringify({ name }) });
             document.getElementById('new-cat-name').value = '';
             fetchSystemData();
         }
@@ -176,14 +190,14 @@
         async function editCategory(id, oldName) {
             const newName = await SysUI.showPrompt('重命名防区', `当前名称: [ ${oldName} ]`, oldName);
             if (newName && newName !== oldName) {
-                await fetch('/api/categories', { method: 'PUT', body: JSON.stringify({ id, name: newName }) });
+                await fetchSecure('/api/categories', { method: 'PUT', body: JSON.stringify({ id, name: newName }) });
                 fetchSystemData();
             }
         }
 
         async function deleteCategory(id, name) {
             if (await SysUI.showConfirm('危险操作', `确定要彻底销毁防区 [ ${name} ] 吗？<br>该分类下的节点将被悬空。`, true)) {
-                await fetch('/api/categories', { method: 'DELETE', body: JSON.stringify({ id }) });
+                await fetchSecure('/api/categories', { method: 'DELETE', body: JSON.stringify({ id }) });
                 fetchSystemData();
             }
         }
@@ -210,14 +224,14 @@
             if (!node) return;
             const updatedNode = await SysUI.showNodeEditor(node);
             if (updatedNode) {
-                await fetch('/api/nodes', { method: 'PUT', body: JSON.stringify(updatedNode) });
+                await fetchSecure('/api/nodes', { method: 'PUT', body: JSON.stringify(updatedNode) });
                 fetchSystemData();
             }
         };
 
         window.triggerNodeDelete = async function(id, title) {
             if (await SysUI.showConfirm('警告', `确定抹除探针 [ ${title} ] 吗？`, true)) {
-                await fetch('/api/nodes', { method: 'DELETE', body: JSON.stringify({ id }) });
+                await fetchSecure('/api/nodes', { method: 'DELETE', body: JSON.stringify({ id }) });
                 fetchSystemData();
             }
         };
@@ -226,7 +240,7 @@
             e.preventDefault();
             statusMsg.style.color = "var(--cyan)"; statusMsg.innerText = "正在同步至 D1 核心...";
             const payload = { title: document.getElementById('node-title').value, url: document.getElementById('node-url').value, description: document.getElementById('node-desc').value, category: document.getElementById('node-category').value, icon: document.getElementById('node-icon').value, color_theme: 'cyan' };
-            if ((await fetch('/api/nodes', { method: 'POST', body: JSON.stringify(payload) })).ok) {
+            if ((await fetchSecure('/api/nodes', { method: 'POST', body: JSON.stringify(payload) })).ok) {
                 statusMsg.style.color = "var(--green)"; statusMsg.innerText = "节点注入成功。";
                 document.getElementById('add-node-form').reset();
                 setTimeout(() => statusMsg.innerText = "", 3000);
@@ -243,7 +257,7 @@
             statusMsg.style.color = "var(--pink)"; statusMsg.innerText = "边缘 AI 靶向解析中...";
 
             try {
-                const res = await fetch('/api/parse', { method: 'POST', body: JSON.stringify({ url: urlInput }) });
+                const res = await fetchSecure('/api/parse', { method: 'POST', body: JSON.stringify({ url: urlInput }) });
                 if (res.ok) {
                     const data = await res.json();
                     if(data.title) document.getElementById('node-title').value = data.title;

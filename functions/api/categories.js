@@ -1,6 +1,5 @@
-// functions/api/categories.js
-// 搭载主动强同步预热 (Strict Cache Warming) 与 ETag 短路引擎
 import { warmUpGenericCache } from './_cache.js';
+import { checkAuth } from './_auth.js';
 
 async function warmUpCatCache(env) {
     return warmUpGenericCache(env, "SELECT * FROM categories ORDER BY sort_order ASC, id ASC", "all_categories_data", "cat");
@@ -27,35 +26,33 @@ export async function onRequestGet(context) {
 }
 
 export async function onRequestPost(context) {
+    if (!checkAuth(context.request, context.env)) return new Response("Unauthorized", { status: 401 });
+    
     const { name } = await context.request.json();
     await context.env.DB.prepare("INSERT INTO categories (name) VALUES (?)").bind(name).run();
-    
-    // 【核心修复】：强同步 await
     await warmUpCatCache(context.env);
     return new Response(JSON.stringify({ success: true }));
 }
 
 export async function onRequestPut(context) {
+    if (!checkAuth(context.request, context.env)) return new Response("Unauthorized", { status: 401 });
+
     const data = await context.request.json();
     if (Array.isArray(data)) {
         if (data.length > 0) {
-            const chunkSize = 50; // Cloudflare D1 maximum bound parameters limit is 100 per query. We use 2 params per item.
+            const chunkSize = 50;
             const statements = [];
-
             for (let i = 0, len = data.length; i < len; i += chunkSize) {
                 const chunk = data.slice(i, i + chunkSize);
                 const placeholders = [];
                 const params = [];
-
                 for (let j = 0, chunkLen = chunk.length; j < chunkLen; j++) {
                     placeholders.push(`(?, ?)`);
                     params.push(chunk[j].id, i + j);
                 }
-
                 const sql = `WITH updated(id, sort_order) AS (VALUES ${placeholders.join(', ')}) UPDATE categories SET sort_order = updated.sort_order FROM updated WHERE categories.id = updated.id`;
                 statements.push(context.env.DB.prepare(sql).bind(...params));
             }
-
             if (statements.length > 0) {
                 await context.env.DB.batch(statements);
             }
@@ -65,16 +62,15 @@ export async function onRequestPut(context) {
         await context.env.DB.prepare("UPDATE categories SET name = ? WHERE id = ?").bind(name, id).run();
     }
     
-    // 【核心修复】：强同步 await
     await warmUpCatCache(context.env);
     return new Response(JSON.stringify({ success: true }));
 }
 
 export async function onRequestDelete(context) {
+    if (!checkAuth(context.request, context.env)) return new Response("Unauthorized", { status: 401 });
+
     const { id } = await context.request.json();
     await context.env.DB.prepare("DELETE FROM categories WHERE id = ?").bind(id).run();
-    
-    // 【核心修复】：强同步 await
     await warmUpCatCache(context.env);
     return new Response(JSON.stringify({ success: true }));
 }

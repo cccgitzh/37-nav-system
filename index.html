@@ -471,12 +471,20 @@
             updateAdminUI();
         });
 
-        window.deleteNode = async function(e, id, title) {
+       window.deleteNode = async function(e, id, title) {
             e.preventDefault(); 
             const confirm = await SysUI.showConfirm('抹除节点', `确定要永久销毁 [ ${esc(title)} ] 吗？该操作无法恢复。`, true);
             if (!confirm) return;
             try {
-                const response = await fetch('/api/nodes', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) });
+                // 已修复：为 DELETE 请求附带 Authorization 头部进行底层鉴权
+                const response = await fetch('/api/nodes', { 
+                    method: 'DELETE', 
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${sessionStorage.getItem('sys_op_token')}`
+                    }, 
+                    body: JSON.stringify({ id }) 
+                });
                 if (response.ok) fetchSystemData();
             } catch (error) {}
         };

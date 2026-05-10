@@ -7,7 +7,8 @@ export async function onRequestPost(context) {
         const expectedPassword = env.ADMIN_PASSWORD || 'root';
 
         if (password === expectedPassword) {
-            return new Response(JSON.stringify({ status: "success", token: "AUTHORIZED" }), {
+            const token = btoa(expectedPassword + "||37nav");
+            return new Response(JSON.stringify({ status: "success", token: token }), {
                 headers: { "Content-Type": "application/json" }
             });
         } else {

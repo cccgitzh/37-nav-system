@@ -1,9 +1,9 @@
-// functions/api/nodes.js
-// 搭载主动强同步预热 (Strict Cache Warming) 与 ETag 短路引擎
 import { warmUpGenericCache } from './_cache.js';
+import { checkAuth } from './_auth.js';
 
 async function warmUpCache(env) {
-    return warmUpGenericCache(env, "SELECT * FROM links ORDER BY id DESC", "all_links_data", "v");
+    // 加入 LIMIT 防御，避免长期运行撑爆内存
+    return warmUpGenericCache(env, "SELECT * FROM links ORDER BY id DESC LIMIT 1500", "all_links_data", "v");
 }
 
 export async function onRequestGet(context) {
@@ -31,6 +31,8 @@ export async function onRequestGet(context) {
 }
 
 export async function onRequestPost(context) {
+    if (!checkAuth(context.request, context.env)) return new Response("Unauthorized", { status: 401 });
+
     const { title, url, description, category, icon, color_theme } = await context.request.json();
     const dbResult = await context.env.DB.prepare(
         "INSERT INTO links (title, url, description, category, icon, color_theme) VALUES (?, ?, ?, ?, ?, ?) RETURNING id"
@@ -42,13 +44,13 @@ export async function onRequestPost(context) {
         context.waitUntil(context.env.VECTOR_INDEX.upsert([{ id: dbResult.id.toString(), values: embeddings[0] }]));
     }
     
-    // 【核心修复】：强同步 await，确保 KV 缓存写完再返回给前台，消除刷新延迟
     await warmUpCache(context.env);
-    
     return new Response(JSON.stringify({ success: true }));
 }
 
 export async function onRequestPut(context) {
+    if (!checkAuth(context.request, context.env)) return new Response("Unauthorized", { status: 401 });
+
     const { id, title, url, description, category, icon, color_theme } = await context.request.json();
     await context.env.DB.prepare(
         "UPDATE links SET title=?, url=?, description=?, category=?, icon=?, color_theme=? WHERE id=?"
@@ -60,21 +62,19 @@ export async function onRequestPut(context) {
         context.waitUntil(context.env.VECTOR_INDEX.upsert([{ id: id.toString(), values: embeddings[0] }]));
     }
     
-    // 【核心修复】：强同步 await
     await warmUpCache(context.env);
-    
     return new Response(JSON.stringify({ success: true }));
 }
 
 export async function onRequestDelete(context) {
+    if (!checkAuth(context.request, context.env)) return new Response("Unauthorized", { status: 401 });
+
     const { id } = await context.request.json();
     await context.env.DB.prepare("DELETE FROM links WHERE id = ?").bind(id).run();
     if (context.env.VECTOR_INDEX) {
         context.waitUntil(context.env.VECTOR_INDEX.deleteByIds([id.toString()]));
     }
     
-    // 【核心修复】：强同步 await
     await warmUpCache(context.env);
-    
     return new Response(JSON.stringify({ success: true }));
 }
