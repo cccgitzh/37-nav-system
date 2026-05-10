@@ -131,6 +131,12 @@
     <div id="sys-modal-root"></div>
 
     <script>
+        const esc = (str) => String(str || "").replace(/[&<>"']/g, s => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[s]));
+        const sanitizeUrl = (url) => {
+            const low = String(url || "").trim().toLowerCase();
+            if (low.startsWith('javascript:') || low.startsWith('data:text/html')) return 'about:blank';
+            return url;
+        };
         const SysUI = {
             createContainer(id) {
                 const existing = document.getElementById(id);
@@ -147,9 +153,9 @@
                     overlay.innerHTML = `
                         <div class="cyber-modal">
                             <i class="fa-solid fa-xmark modal-close-x" id="p-close-x"></i>
-                            <div class="cyber-modal-title" style="color:var(--cyan);"><i class="fa-solid fa-terminal"></i> ${title}</div>
+                            <div class="cyber-modal-title" style="color:var(--cyan);"><i class="fa-solid fa-terminal"></i> ${esc(title)}</div>
                             <div class="cyber-modal-msg" style="margin-bottom:15px;">${msg}</div>
-                            <input type="text" id="prompt-input" value="${defaultVal}" style="width:100%; padding:10px; background:rgba(0,0,0,0.3); border:1px solid var(--border); color:var(--text); border-radius:6px; margin-bottom:20px; outline:none;">
+                            <input type="text" id="prompt-input" value="${esc(defaultVal)}" style="width:100%; padding:10px; background:rgba(0,0,0,0.3); border:1px solid var(--border); color:var(--text); border-radius:6px; margin-bottom:20px; outline:none;">
                             <div class="cyber-modal-actions">
                                 <button class="btn-modal cancel" id="p-cancel">取消</button>
                                 <button class="btn-modal confirm" id="p-ok">确认</button>
@@ -173,7 +179,7 @@
                     overlay.innerHTML = `
                         <div class="cyber-modal" style="border-color:${themeColor}">
                             <i class="fa-solid fa-xmark modal-close-x" id="c-close-x"></i>
-                            <div class="cyber-modal-title" style="color:${themeColor};"><i class="fa-solid ${icon}"></i> ${title}</div>
+                            <div class="cyber-modal-title" style="color:${themeColor};"><i class="fa-solid ${icon}"></i> ${esc(title)}</div>
                             <div class="cyber-modal-msg" style="margin-bottom:20px;">${msg}</div>
                             <div class="cyber-modal-actions">
                                 <button class="btn-modal cancel" id="c-cancel">取消</button>
@@ -191,7 +197,7 @@
             showNodeEditor(node) {
                 return new Promise(resolve => {
                     const overlay = this.createContainer('cyber-editor');
-                    const catOptions = globalCategories.map(c => `<option value="${c.name}" ${c.name===node.category?'selected':''}>${c.name}</option>`).join('');
+                    const catOptions = globalCategories.map(c => `<option value="${esc(c.name)}" ${c.name===node.category?'selected':''}>${esc(c.name)}</option>`).join('');
                     overlay.innerHTML = `
                         <div class="cyber-modal" style="max-width: 500px; border-color: var(--cyan);">
                             <i class="fa-solid fa-xmark modal-close-x" id="e-close-x"></i>
@@ -200,14 +206,14 @@
                                 <div class="form-group">
                                     <label>目标链接 (URL)</label>
                                     <div class="input-btn-group">
-                                        <input type="url" id="e-url" value="${node.url}" required>
+                                        <input type="url" id="e-url" value="${esc(node.url)}" required>
                                         <button type="button" id="e-btn-parse" class="btn btn-ai" title="AI边缘重解"><i class="fa-solid fa-wand-magic-sparkles"></i></button>
                                     </div>
                                 </div>
-                                <div class="form-group"><label>节点名称 (Title)</label><input type="text" id="e-title" value="${node.title}" required></div>
-                                <div class="form-group"><label>特征描述 (Description)</label><textarea id="e-desc" rows="2">${node.description||''}</textarea></div>
+                                <div class="form-group"><label>节点名称 (Title)</label><input type="text" id="e-title" value="${esc(node.title)}" required></div>
+                                <div class="form-group"><label>特征描述 (Description)</label><textarea id="e-desc" rows="2">${esc(node.description||'')}</textarea></div>
                                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
-                                    <div class="form-group"><label>图标地址 (支持 fa-xx)</label><input type="text" id="e-icon" value="${node.icon||''}"></div>
+                                    <div class="form-group"><label>图标地址 (支持 fa-xx)</label><input type="text" id="e-icon" value="${esc(node.icon||'')}"></div>
                                     <div class="form-group"><label>归属分类 (Category)</label><select id="e-category">${catOptions}</select></div>
                                 </div>
                                 <div class="cyber-modal-actions" style="margin-top: 15px;">
@@ -268,7 +274,7 @@
 
         function renderCategories() {
             const list = document.getElementById('cat-list');
-            document.getElementById('node-category').innerHTML = globalCategories.map(c => `<option value="${c.name}">${c.name}</option>`).join('') || '<option value="Default">Default</option>';
+            document.getElementById('node-category').innerHTML = globalCategories.map(c => `<option value="${esc(c.name)}">${esc(c.name)}</option>`).join('') || '<option value="Default">Default</option>';
             list.innerHTML = '';
             
             globalCategories.forEach((c, index) => {
@@ -276,9 +282,9 @@
                 tag.className = 'cat-tag'; tag.draggable = true;
                 tag.innerHTML = `
                     <i class="fa-solid fa-grip-lines" style="cursor:grab;" title="拖拽排序"></i>
-                    <span>${c.name}</span>
-                    <i class="fa-solid fa-pen edit" title="重命名" onclick="editCategory(${c.id}, '${c.name}')"></i>
-                    <i class="fa-solid fa-trash del" title="销毁" onclick="deleteCategory(${c.id}, '${c.name}')"></i>
+                    <span>${esc(c.name)}</span>
+                    <i class="fa-solid fa-pen edit" title="重命名" onclick='editCategory(${c.id}, ${esc(JSON.stringify(c.name))})'></i>
+                    <i class="fa-solid fa-trash del" title="销毁" onclick='deleteCategory(${c.id}, ${esc(JSON.stringify(c.name))})'></i>
                 `;
 
                 tag.addEventListener('dragstart', (e) => { e.target.classList.add('dragging'); e.dataTransfer.setData('text/plain', index); });
@@ -307,7 +313,7 @@
         }
 
         async function editCategory(id, oldName) {
-            const newName = await SysUI.showPrompt('重命名防区', `当前名称: [ ${oldName} ]`, oldName);
+            const newName = await SysUI.showPrompt('重命名防区', `当前名称: [ ${esc(oldName)} ]`, oldName);
             if (newName && newName !== oldName) {
                 await fetch('/api/categories', { method: 'PUT', body: JSON.stringify({ id, name: newName }) });
                 fetchSystemData();
@@ -315,7 +321,7 @@
         }
 
         async function deleteCategory(id, name) {
-            if (await SysUI.showConfirm('危险操作', `确定要彻底销毁防区 [ ${name} ] 吗？<br>该分类下的节点将被悬空。`, true)) {
+            if (await SysUI.showConfirm('危险操作', `确定要彻底销毁防区 [ ${esc(name)} ] 吗？<br>该分类下的节点将被悬空。`, true)) {
                 await fetch('/api/categories', { method: 'DELETE', body: JSON.stringify({ id }) });
                 fetchSystemData();
             }
@@ -327,12 +333,12 @@
             container.innerHTML = globalNodes.map(link => `
                 <div class="node-item">
                     <div class="node-info">
-                        <h4>${link.title} <span class="badge">${link.category}</span></h4>
-                        <p>${link.url}</p>
+                        <h4>${esc(link.title)} <span class="badge">${esc(link.category)}</span></h4>
+                        <p>${esc(link.url)}</p>
                     </div>
                     <div class="action-btns">
                         <button class="btn-icon edit" onclick="triggerNodeEdit(${link.id})"><i class="fa-solid fa-pen"></i></button>
-                        <button class="btn-icon del" onclick="triggerNodeDelete(${link.id}, '${link.title.replace(/'/g, "\\'")}')"><i class="fa-solid fa-trash"></i></button>
+                        <button class="btn-icon del" onclick='triggerNodeDelete(${link.id}, ${esc(JSON.stringify(link.title))})'><i class="fa-solid fa-trash"></i></button>
                     </div>
                 </div>
             `).join('');
@@ -349,7 +355,7 @@
         };
 
         window.triggerNodeDelete = async function(id, title) {
-            if (await SysUI.showConfirm('警告', `确定抹除探针 [ ${title} ] 吗？`, true)) {
+            if (await SysUI.showConfirm('警告', `确定抹除探针 [ ${esc(title)} ] 吗？`, true)) {
                 await fetch('/api/nodes', { method: 'DELETE', body: JSON.stringify({ id }) });
                 fetchSystemData();
             }
