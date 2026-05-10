@@ -212,6 +212,33 @@
     <div id="sys-modal-root"></div>
 
     <script>
+        // ==========================================
+        // 核心安全工具函数 (防止 XSS 注入)
+        // ==========================================
+        function esc(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        function sanitizeUrl(url) {
+            if (!url) return '#';
+            try {
+                // 仅允许 http 和 https 协议，过滤掉 javascript: 等危险协议
+                const parsed = new URL(url, window.location.origin);
+                if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
+                    return parsed.href;
+                }
+                return '#';
+            } catch (e) {
+                // 如果 URL 不合法（例如纯字母），也退回到安全锚点
+                return '#';
+            }
+        }
 
         const SysUI = {
             createContainer(id) {
@@ -277,7 +304,7 @@
 
         let globalCategories = [];
         let globalNodes = [];
-        let isAdmin = sessionStorage.getItem('sys_op_token') === 'AUTHORIZED';
+        let isAdmin = sessionStorage.getItem('sys_op_token') !== null;
         const dynamicZones = document.getElementById('dynamic-zones');
         const navCatContainer = document.getElementById('nav-categories');
         const draculaColors = ['#8BE9FD', '#50FA7B', '#FF79C6', '#BD93F9', '#FF5555', '#F1FA8C', '#FFB86C'];
@@ -382,7 +409,7 @@
                     if (targetImgUrl) {
                         targetImgUrl = sanitizeUrl(targetImgUrl);
                         iconHTML = `
-
+                            <img src="${targetImgUrl}" class="card-icon" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" loading="lazy">
                             <i class="fa-solid fa-globe card-icon hidden items-center justify-center text-[34px] text-dracula-fg"></i>`;
 
                         const hiddenImg = new Image();
@@ -471,12 +498,12 @@
             updateAdminUI();
         });
 
-       window.deleteNode = async function(e, id, title) {
+        // 核心修复点：为删除操作加入了鉴权 Header
+        window.deleteNode = async function(e, id, title) {
             e.preventDefault(); 
             const confirm = await SysUI.showConfirm('抹除节点', `确定要永久销毁 [ ${esc(title)} ] 吗？该操作无法恢复。`, true);
             if (!confirm) return;
             try {
-                // 已修复：为 DELETE 请求附带 Authorization 头部进行底层鉴权
                 const response = await fetch('/api/nodes', { 
                     method: 'DELETE', 
                     headers: { 
