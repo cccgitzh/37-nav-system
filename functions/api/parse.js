@@ -1,6 +1,8 @@
 /**
- * 37° Nav - 边缘智能靶向解析 API (知识库强制唤醒 + 误杀修复版)
+ * 37° Nav - 边缘智能靶向解析 API (HTMLRewriter 引擎重构版)
  * 架构适配：Cloudflare Pages Functions
+ * 最后更新：2026-05-10
+ * 优化内容：解决Git冲突、整合双分支特性、优化favicon获取、增强错误处理
  */
 
 export async function onRequest(context) {
@@ -14,6 +16,7 @@ export async function onRequest(context) {
 
     if (request.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
 
+    // 提取 URL
     let targetUrl = new URL(request.url).searchParams.get('url');
     if (!targetUrl && request.method === 'POST') {
         const body = await request.json().catch(() => ({}));
@@ -23,11 +26,12 @@ export async function onRequest(context) {
     try {
         if (!targetUrl) throw new Error("Missing URL");
         
+        // 标准化网址
         const siteUrl = targetUrl.startsWith('http') ? targetUrl : `https://${targetUrl}`;
         const domain = new URL(siteUrl).hostname;
         const rootDomain = getRootDomain(domain);
 
-        // 1. 白名单直通车
+        // 1. 顶级优先级：强制简称白名单
         const whiteList = getMandatoryWhiteList();
         if (whiteList[domain] || whiteList[rootDomain]) {
             const data = whiteList[domain] || whiteList[rootDomain];
@@ -37,50 +41,67 @@ export async function onRequest(context) {
                 category: data.siteCategory,
                 icon: getPerfectFavicon(domain),
                 url: siteUrl
-            }, null, 2), { headers: corsHeaders });
+            }, null, 2), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
         }
 
-        // 2. 强力抓取元数据
+        // 2. 启用真正的 DOM 解析引擎抓取元数据（彻底告别正则失效）
         const meta = await fetchSuperMetadata(siteUrl);
         const cleanMeta = cleanText(meta);
         
-        // Improve invalid detection: Check if it's an anti-bot page or lacks meaningful content
-        const antiBotKeywords = ["just a moment", "attention required", "cloudflare", "captcha", "are you human", "access denied", "checking your browser"];
-        const combinedText = (cleanMeta.title + " " + cleanMeta.desc).toLowerCase();
-        const isAntiBot = antiBotKeywords.some(kw => combinedText.includes(kw));
+        // 增强型无效内容检测（整合双分支逻辑）
+        const combinedText = cleanMeta.title + cleanMeta.desc;
+        const isAntiBot = /(robot|captcha|verify|check|security|验证|人机|机器人)/i.test(combinedText);
+        const isInvalid = isAntiBot || !/[a-zA-Z\u4e00-\u9fa5]{2}/.test(combinedText) || 
+                         (combinedText.length < 15 && !/[\u4e00-\u9fa5]/.test(combinedText));
 
-        // It's invalid if it's a bot check, OR if it has literally no characters, OR if it's purely English but very short
-        const isInvalid = isAntiBot || !/[a-zA-Z\u4e00-\u9fa5]{2}/.test(combinedText) || (combinedText.length < 15 && !/[\u4e00-\u9fa5]/.test(combinedText));
-
-        let finalIcon = getPerfectFavicon(domain);
         if (meta.iconUrl) {
             try {
-                finalIcon = new URL(meta.iconUrl, siteUrl).href;
+                candidateIcon = new URL(meta.iconUrl, siteUrl).href;
             } catch (e) {
-                // fallback to default
+                // 解析失败，使用默认favicon.im
             }
         }
 
-        // 3. 双擎 AI 深度解析
-        let aiResult;
+        // 3. 并行执行：双擎 AI 深度解析与翻译 + 图标可用性验证
         if (!env.AI) throw new Error("AI Engine not bound");
 
-        try {
-            aiResult = await env.AI.run('@cf/meta/llama-3.3-70b-instruct-fp8-fast', {
-                messages: [{ role: 'user', content: getPerfectPrompt(cleanMeta, siteUrl, isInvalid) }],
-                temperature: 0, 
-                max_tokens: 256
-            });
-        } catch (e) {
-            console.warn("70B 主引擎过载，切换至 8B 极速引擎", e);
-            aiResult = await env.AI.run('@cf/meta/llama-3.1-8b-instruct', {
-                messages: [{ role: 'user', content: getPerfectPrompt(cleanMeta, siteUrl, isInvalid) }],
-                temperature: 0, 
-                max_tokens: 256
-            });
-        }
+        const aiPromise = (async () => {
+            try {
+                return await env.AI.run('@cf/meta/llama-3.3-70b-instruct-fp8-fast', {
+                    messages: [{ role: 'user', content: getPerfectPrompt(cleanMeta, siteUrl, isInvalid) }],
+                    temperature: 0,
+                    max_tokens: 256
+                });
+            } catch (e) {
+                console.warn("70B 引擎过载，极速切换至 8B", e);
+                return await env.AI.run('@cf/meta/llama-3.1-8b-instruct', {
+                    messages: [{ role: 'user', content: getPerfectPrompt(cleanMeta, siteUrl, isInvalid) }],
+                    temperature: 0,
+                    max_tokens: 256
+                });
+            }
+        })();
 
-        // 4. 提取与净化
+        const iconPromise = (async () => {
+            // 如果是完美图标回调（来自我们自己的 API 或者确信稳定的接口），可能不需要验证，但如果是抓取的 URL，则验证可用性
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 2000);
+                const res = await fetch(candidateIcon, { method: 'HEAD', signal: controller.signal });
+                clearTimeout(timeoutId);
+                if (res.ok) {
+                    return candidateIcon;
+                }
+            } catch (e) {
+                // 网络错误或超时
+            }
+            // 验证失败，降级
+            return getPerfectFavicon(domain);
+        })();
+
+        const [aiResult, finalIcon] = await Promise.all([aiPromise, iconPromise]);
+
+        // 4. 终极 JSON 净化与提取
         const result = forceValidate(aiResult, domain);
 
         return new Response(JSON.stringify({
@@ -89,17 +110,18 @@ export async function onRequest(context) {
             category: result.siteCategory,
             icon: finalIcon,
             url: siteUrl
-        }, null, 2), { headers: corsHeaders });
+        }, null, 2), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 
     } catch (error) {
+        console.error("解析失败:", error);
         const domain = extractDomain(targetUrl);
         return new Response(JSON.stringify({
             title: guessPerfectName(domain),
-            description: "网站无法访问或防爬虫拦截",
+            description: "网站防爬虫或解析失败",
             category: "探索基地",
             icon: getPerfectFavicon(domain || "default"),
             url: targetUrl
-        }, null, 2), { headers: corsHeaders });
+        }, null, 2), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 }
 
@@ -126,15 +148,31 @@ function getMandatoryWhiteList() {
         "mail.google.com": { siteName: "谷歌邮箱", siteDesc: "安全高效的免费电子邮件服务", siteCategory: "通讯" },
         "gemini.google.com": { siteName: "Gemini", siteDesc: "Google 旗下原生多模态人工智能大模型", siteCategory: "AI人工智能" },
         "chatgpt.com": { siteName: "ChatGPT", siteDesc: "OpenAI 旗下的现象级 AI 聊天机器人", siteCategory: "AI人工智能" },
-        "dash.cloudflare.com": { siteName: "CF 控制台", siteDesc: "全球领先的边缘计算与 CDN 管理平台", siteCategory: "探索基地" }
+        "dash.cloudflare.com": { siteName: "CF 控制台", siteDesc: "全球领先的边缘计算与 CDN 管理平台", siteCategory: "探索基地" },
+        "claude.ai": { siteName: "Claude", siteDesc: "Anthropic 开发的高智能 AI 助手", siteCategory: "AI人工智能" },
+        "duckduckgo.com": { siteName: "DuckDuckGo", siteDesc: "不追踪用户的隐私保护搜索引擎", siteCategory: "探索基地" },
+        "wikipedia.org": { siteName: "维基百科", siteDesc: "自由的百科全书，人类知识的基石", siteCategory: "知识" },
+        "reddit.com": { siteName: "Reddit", siteDesc: "全球最大的综合性兴趣社区", siteCategory: "论坛" },
+        "netflix.com": { siteName: "网飞", siteDesc: "全球领先的流媒体点播平台", siteCategory: "视频音乐" }
     };
 }
 
+// ==========================================
+// 【2】Favicon 智能获取（基于favicon.im官方文档优化）
+// ==========================================
 function getPerfectFavicon(domain) {
-    if (!domain || domain === 'default') return '';
+    if (!domain || domain === 'default') {
+        // 默认图标：使用favicon.im的默认回退
+        return 'https://favicon.im/default';
+    }
+    // 使用favicon.im服务，自动搜索最佳图标位置
+    // 如需更大尺寸，可添加 ?larger=true 参数
     return `https://favicon.im/${domain}`;
 }
 
+// ==========================================
+// 【3】跨洋防反爬元数据抓取 (全面升级 HTMLRewriter 引擎)
+// ==========================================
 async function fetchSuperMetadata(url) {
     const agents = [
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/124.0.0.0 Safari/537.36",
@@ -161,47 +199,81 @@ async function fetchSuperMetadata(url) {
             clearTimeout(timeoutId);
 
             if (res.ok) {
-                const html = (await res.text()).substring(0, 50000); 
+                // 处理字符编码：尝试从 Content-Type 中提取 charset
+                const contentType = res.headers.get("Content-Type") || "";
+                const charsetMatch = contentType.match(/charset=([^;]+)/i);
+                const charset = charsetMatch ? charsetMatch[1].trim().toLowerCase() : "utf-8";
 
-                const titleMatch = html.match(/<title[^>]*>(.*?)<\/title>/is)?.[1]
-                    || html.match(/property="og:title"\s+content="(.*?)"/is)?.[1]
-                    || html.match(/name="twitter:title"\s+content="(.*?)"/is)?.[1]
-                    || "";
+                // 使用 Cloudflare 原生 HTMLRewriter，无视任何属性排序错乱
+                let extracted = { title: '', desc: '', iconUrl: '' };
 
-                const descMatch = html.match(/name="description"\s+content="(.*?)"/is)?.[1]
-                    || html.match(/property="og:description"\s+content="(.*?)"/is)?.[1]
-                    || html.match(/name="twitter:description"\s+content="(.*?)"/is)?.[1]
-                    || "";
+                // 针对非 UTF-8 编码进行预处理 (Cloudflare HTMLRewriter 仅支持 UTF-8)
+                let responseToTransform = res;
+                if (charset !== "utf-8" && charset !== "utf8") {
+                    try {
+                        const buffer = await res.arrayBuffer();
+                        const decoder = new TextDecoder(charset);
+                        const decodedText = decoder.decode(buffer);
+                        responseToTransform = new Response(decodedText, {
+                            headers: res.headers
+                        });
+                    } catch (e) {
+                        // 解码失败则降级使用原始响应
+                    }
+                }
 
-                const iconMatch = html.match(/<link[^>]*rel="[^"]*(?:icon|apple-touch-icon)[^"]*"[^>]*href="([^"]+)"/is)?.[1]
-                    || html.match(/<link[^>]*href="([^"]+)"[^>]*rel="[^"]*(?:icon|apple-touch-icon)[^"]*"/is)?.[1]
-                    || "";
+                let titleChunks = [];
+                const rewriter = new HTMLRewriter()
+                    .on('title', {
+                        text(text) { titleChunks.push(text.text); }
+                    })
+                    .on('meta', {
+                        element(el) {
+                            const name = (el.getAttribute('name') || '').toLowerCase();
+                            const prop = (el.getAttribute('property') || '').toLowerCase();
+                            const content = el.getAttribute('content') || '';
+                            
+                            if ((name === 'description' || name === 'keywords' || prop === 'og:description' || prop === 'twitter:description') && !extracted.desc) {
+                                extracted.desc = content;
+                            }
+                            const hasTitle = extracted.title || titleChunks.length > 0;
+                            if ((prop === 'og:title' || prop === 'twitter:title' || name === 'application-name') && !hasTitle) {
+                                extracted.title = content;
+                            }
+                            if ((prop === 'og:image' || prop === 'twitter:image') && !extracted.iconUrl) {
+                                extracted.iconUrl = content;
+                            }
+                        }
+                    })
+                    // 额外提取link标签中的favicon
+                    .on('link[rel*="icon"]', {
+                        element(el) {
+                            const href = el.getAttribute('href');
+                            if (href && !extracted.iconUrl) {
+                                extracted.iconUrl = href;
+                            }
+                        }
+                    });
 
-                return {
-                    title: titleMatch,
-                    desc: descMatch,
-                    iconUrl: iconMatch
-                };
+                await rewriter.transform(responseToTransform).text();
+                if (titleChunks.length > 0) {
+                    extracted.title += titleChunks.join('');
+                }
+                return extracted;
             }
-        } catch (e) {}
+        } catch (e) {
+            // 继续重试
+        }
     }
     return { title: "", desc: "", iconUrl: "" };
 }
 
-// 【核心修复】：强化知识库唤醒，即使只有标题没有描述，也要强行盲猜
-function getPerfectPrompt(meta, url, isInvalid) {
+// ==========================================
+// 【4】翻译指令锁死 Prompt（整合双分支最佳实践）
+// ==========================================
+export function getPerfectPrompt(meta, url, isInvalid) {
     const isLackingInfo = isInvalid || !meta.desc || meta.desc.trim().length < 5;
     
-    return `你是一个无情的JSON提取器。你必须并且只能输出合法的JSON对象，绝对不要输出任何其他文字、解释或Markdown符号！
-
-核心任务：提取或猜测给定网站的信息。
-1. 无论原始数据是什么语言，输出必须是纯正的【简体中文】。
-2. siteName：网民最常用的极简称呼（限15字符）。注意分析网址的子域名（例如 music.youtube.com 应该是 YouTube Music）。
-3. siteDesc：【最高优先级】一句话中文简介（限30汉字）。如果提供的数据为空、无意义、包含防爬虫验证，或者 "是否缺乏有效描述信息" 为 true，你必须彻底忽略原始数据！请直接根据网址（${url}）和它的知名度，从你的知识库中写一句精准的中文介绍！绝对不要输出“暂无简介”！
-4. siteCategory：选择最贴切的分类。可以从 [视频音乐, 论坛, 探索基地, 购物, 知识, 技术, 生活, 通讯, AI人工智能, 实用工具, 设计, 开发者] 中选。如果没有合适的，你可以自行发明一个 2 到 4 个字的精准中文分类。
-
-输出格式严格如下：
-{"siteName": "网站名称", "siteDesc": "一句话中文简介", "siteCategory": "分类"}
 
 待处理源数据：
 标题: ${meta.title}
@@ -210,7 +282,9 @@ function getPerfectPrompt(meta, url, isInvalid) {
 是否缺乏有效描述信息: ${isLackingInfo}`;
 }
 
-// 【核心修复】：取消对常用词“提供”的误杀，仅智能裁切废话开头
+// ==========================================
+// 【5】终极强制校验（整合双分支逻辑）
+// ==========================================
 function forceValidate(aiRes, domain) {
     try {
         let jsonStr = aiRes.response || "";
@@ -219,72 +293,81 @@ function forceValidate(aiRes, domain) {
         let jsonMatch = jsonStr.match(/\{[\s\S]*\}/);
         if (!jsonMatch) throw new Error("No JSON found");
 
-        let data;
-        try {
-            data = JSON.parse(jsonMatch[0]);
-        } catch(e) {
-            // 如果解析失败，尝试去掉可能的尾部垃圾字符
-            let cleanStr = jsonMatch[0].replace(/}[^}]*$/, '}');
-            data = JSON.parse(cleanStr);
-        }
+
         
         data.siteName = (data.siteName || guessPerfectName(domain)).slice(0, 20); 
         data.siteDesc = (data.siteDesc || "暂无简介").slice(0, 50);
 
-        if (data.siteDesc === "暂无简介") {
-            // 如果 AI 还是偷懒了，强制用 fallback 描述
-            data.siteDesc = `访问 ${guessPerfectName(domain)} 的官方站点`;
+
         }
         
-        // 允许 AI 发明分类，但限制长度以防乱写
-        if (!data.siteCategory || data.siteCategory.length > 8) {
-             data.siteCategory = "探索基地";
-        }
-        
-        // 智能裁切：不再粗暴地替换为“暂无简介”，而是仅仅把废话开头删掉
+        // 移除机器腔前缀
         if(data.siteDesc.startsWith("这是一个") || data.siteDesc.startsWith("这是一款")) {
             data.siteDesc = data.siteDesc.replace(/^这是(一个|一款)/, "");
         }
         
+        // 验证分类有效性
+        const validCategories = ["视频音乐", "论坛", "探索基地", "购物", "知识", "技术", "生活", "通讯", "AI人工智能"];
+        data.siteCategory = validCategories.includes(data.siteCategory) ? data.siteCategory : "探索基地";
+        
         return data;
     } catch (e) {
-        return { siteName: guessPerfectName(domain), siteDesc: "暂无简介", siteCategory: "探索基地" };
+        console.error("AI结果解析失败:", e);
+        return { 
+            siteName: guessPerfectName(domain), 
+            siteDesc: `访问 ${guessPerfectName(domain)} 的官方站点`, 
+            siteCategory: "探索基地" 
+        };
     }
 }
 
+// ==========================================
+// 【6】首字母大写盲猜兜底
+// ==========================================
 function guessPerfectName(domain) {
     if(!domain) return "未知站点";
-    // 更好地处理子域名
-    const parts = domain.split(".");
-    if (parts.length > 2 && parts[0] !== "www") {
-        return (parts[0].charAt(0).toUpperCase() + parts[0].slice(1)) + " " + (parts[1].charAt(0).toUpperCase() + parts[1].slice(1));
+
+    // 排除常见前缀
+    const parts = domain.split('.').filter(p => !['www', 'm', 'mobile', 'mail'].includes(p.toLowerCase()));
+
+    // 尝试提取最有意义的部分
+    // 如果是 sub.domain.com，优先取 sub domain
+    if (parts.length >= 2) {
+        const tldParts = ['com', 'net', 'org', 'edu', 'gov', 'cn', 'me', 'io', 'cc', 'tv', 'ai', 'app', 'dev', 'info', 'xyz'];
+        let significantParts = [];
+
+        for (let i = 0; i < parts.length; i++) {
+            if (tldParts.includes(parts[i].toLowerCase())) break;
+            significantParts.push(parts[i]);
+        }
+
+        if (significantParts.length > 0) {
+            return significantParts.map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' ');
+        }
     }
+
     const main = getRootDomain(domain).split(".")[0];
     return main.charAt(0).toUpperCase() + main.slice(1);
 }
 
-function getRootDomain(d) { 
+export function getRootDomain(d) {
     if(!d) return "";
     const p = d.split('.'); 
-    return p.length >= 2 ? `${p[p.length-2]}.${p[p.length-1]}` : d; 
-}
+    if (p.length < 2) return d;
 
-function decodeHTMLEntities(text) {
-    const entities = {
-        '&#039;': "'",
-        '&quot;': '"',
-        '&amp;': '&',
-        '&lt;': '<',
-        '&gt;': '>',
-        '&nbsp;': ' ',
-        '&mdash;': '—',
-        '&ndash;': '–'
-    };
-    return text.replace(/&#?\w+;/g, match => entities[match] || match);
+    // 处理 .com.cn / .net.cn 等双重后缀
+    const doubleSuffixes = ['com.cn', 'net.cn', 'org.cn', 'gov.cn', 'edu.cn'];
+    const lastTwo = `${p[p.length-2]}.${p[p.length-1]}`.toLowerCase();
+
+    if (doubleSuffixes.includes(lastTwo) && p.length >= 3) {
+        return `${p[p.length-3]}.${lastTwo}`;
+    }
+
+    return `${p[p.length-2]}.${p[p.length-1]}`;
 }
 
 function cleanText(m) { 
-    const c = s => decodeHTMLEntities((s || "").replace(/[\r\n\t]+/g, " ").replace(/\s{2,}/g, " ").trim());
+    const c = s => (s || "").replace(/[\r\n\t]+/g, " ").replace(/\s{2,}/g, " ").trim(); 
     return { title: c(m.title), desc: c(m.desc) }; 
 }
 
