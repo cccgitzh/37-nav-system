@@ -55,33 +55,53 @@ export async function onRequest(context) {
                          (combinedText.length < 15 && !/[\u4e00-\u9fa5]/.test(combinedText));
 
         // 智能图标选择：优先使用网站自身图标，降级到favicon.im
-        let finalIcon = getPerfectFavicon(domain);
+        let candidateIcon = getPerfectFavicon(domain);
         if (meta.iconUrl) {
             try {
-                finalIcon = new URL(meta.iconUrl, siteUrl).href;
+                candidateIcon = new URL(meta.iconUrl, siteUrl).href;
             } catch (e) {
                 // 解析失败，使用默认favicon.im
             }
         }
 
-        // 3. 双擎 AI 深度解析与翻译
-        let aiResult;
+        // 3. 并行执行：双擎 AI 深度解析与翻译 + 图标可用性验证
         if (!env.AI) throw new Error("AI Engine not bound");
 
-        try {
-            aiResult = await env.AI.run('@cf/meta/llama-3.3-70b-instruct-fp8-fast', {
-                messages: [{ role: 'user', content: getPerfectPrompt(cleanMeta, siteUrl, isInvalid) }],
-                temperature: 0, 
-                max_tokens: 256
-            });
-        } catch (e) {
-            console.warn("70B 引擎过载，极速切换至 8B", e);
-            aiResult = await env.AI.run('@cf/meta/llama-3.1-8b-instruct', {
-                messages: [{ role: 'user', content: getPerfectPrompt(cleanMeta, siteUrl, isInvalid) }],
-                temperature: 0, 
-                max_tokens: 256
-            });
-        }
+        const aiPromise = (async () => {
+            try {
+                return await env.AI.run('@cf/meta/llama-3.3-70b-instruct-fp8-fast', {
+                    messages: [{ role: 'user', content: getPerfectPrompt(cleanMeta, siteUrl, isInvalid) }],
+                    temperature: 0,
+                    max_tokens: 256
+                });
+            } catch (e) {
+                console.warn("70B 引擎过载，极速切换至 8B", e);
+                return await env.AI.run('@cf/meta/llama-3.1-8b-instruct', {
+                    messages: [{ role: 'user', content: getPerfectPrompt(cleanMeta, siteUrl, isInvalid) }],
+                    temperature: 0,
+                    max_tokens: 256
+                });
+            }
+        })();
+
+        const iconPromise = (async () => {
+            // 如果是完美图标回调（来自我们自己的 API 或者确信稳定的接口），可能不需要验证，但如果是抓取的 URL，则验证可用性
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 2000);
+                const res = await fetch(candidateIcon, { method: 'HEAD', signal: controller.signal });
+                clearTimeout(timeoutId);
+                if (res.ok) {
+                    return candidateIcon;
+                }
+            } catch (e) {
+                // 网络错误或超时
+            }
+            // 验证失败，降级
+            return getPerfectFavicon(domain);
+        })();
+
+        const [aiResult, finalIcon] = await Promise.all([aiPromise, iconPromise]);
 
         // 4. 终极 JSON 净化与提取
         const result = forceValidate(aiResult, domain);
